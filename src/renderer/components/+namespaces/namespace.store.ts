@@ -20,7 +20,7 @@
  */
 
 import { action, comparer, computed, IReactionDisposer, makeObservable, reaction } from "mobx";
-import { autoBind, createStorage, noop, ToggleSet } from "../../utils";
+import { autoBind, createStorage, noop, toggle } from "../../utils";
 import { KubeObjectStore, KubeObjectStoreLoadingParams } from "../../../common/k8s-api/kube-object.store";
 import { Namespace, namespacesApi } from "../../../common/k8s-api/endpoints/namespaces.api";
 import { apiManager } from "../../../common/k8s-api/api-manager";
@@ -190,10 +190,10 @@ export class NamespaceStore extends KubeObjectStore<Namespace> {
    */
   @action
   toggleContext(namespaces: string | string[]) {
-    const nextState = new ToggleSet(this.contextNamespaces);
+    const nextState = new Set(this.contextNamespaces);
 
     for (const namespace of [namespaces].flat()) {
-      nextState.toggle(namespace);
+      toggle(nextState, namespace);
     }
 
     this.storage.set([...nextState]);
@@ -205,10 +205,10 @@ export class NamespaceStore extends KubeObjectStore<Namespace> {
    * explicitly deselected.
    * @param namespace The name of a namespace
    */
-  toggleSingle(namespace: string) {
-    const nextState = new ToggleSet(this.contextNamespaces);
+  toggleSingle(namespace: string){
+    const nextState = new Set(this.contextNamespaces);
 
-    nextState.toggle(namespace);
+    toggle(nextState, namespace);
     this.storage.set([...nextState]);
   }
 

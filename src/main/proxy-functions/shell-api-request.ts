@@ -25,7 +25,7 @@ import { NodeShellSession, LocalShellSession } from "../shell-session";
 import type { ProxyApiRequestArgs } from "./types";
 import { ClusterManager } from "../cluster-manager";
 import URLParse from "url-parse";
-import { ExtendedMap, Singleton } from "../../common/utils";
+import { getOrInsert, Singleton } from "../../common/utils";
 import type { ClusterId } from "../../common/cluster-types";
 import { ipcMainHandle } from "../../common/ipc";
 import crypto from "crypto";
@@ -34,14 +34,13 @@ import { promisify } from "util";
 const randomBytes = promisify(crypto.randomBytes);
 
 export class ShellRequestAuthenticator extends Singleton {
-  private tokens = new ExtendedMap<ClusterId, Map<string, Uint8Array>>();
+  private tokens = new Map<ClusterId, Map<string, Uint8Array>>();
 
   init() {
     ipcMainHandle("cluster:shell-api", async (event, clusterId, tabId) => {
       const authToken = Uint8Array.from(await randomBytes(128));
 
-      this.tokens
-        .getOrInsert(clusterId, () => new Map())
+      getOrInsert(this.tokens, clusterId, new Map())
         .set(tabId, authToken);
 
       return authToken;
