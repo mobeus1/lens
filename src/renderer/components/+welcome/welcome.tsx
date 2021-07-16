@@ -25,8 +25,7 @@ import { observer } from "mobx-react";
 import Carousel from "react-material-ui-carousel";
 import { Icon } from "../icon";
 import { productName, slackUrl } from "../../../common/vars";
-import { WelcomeMenuRegistry } from "../../../extensions/registries";
-import { WelcomeBannerRegistry } from "../../../extensions/registries";
+import { WelcomeMenuRegistry, WelcomeBannerRegistry } from "../../../extensions/registries";
 
 export const defaultWidth = 320;
 

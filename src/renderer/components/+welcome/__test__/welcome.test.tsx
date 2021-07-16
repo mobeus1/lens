@@ -22,9 +22,8 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/extend-expect";
-import { Welcome } from "../welcome";
+import { Welcome, defaultWidth } from "../welcome";
 import { TopBarRegistry, WelcomeMenuRegistry, WelcomeBannerRegistry } from "../../../../extensions/registries";
-import { defaultWidth } from "../welcome";
 
 jest.mock(
   "electron",

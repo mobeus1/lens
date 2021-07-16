@@ -108,6 +108,8 @@ module.exports = {
       parser: "@typescript-eslint/parser",
       extends: [
         "plugin:@typescript-eslint/recommended",
+        "plugin:import/recommended",
+        "plugin:import/typescript",
       ],
       plugins: [
         "header",
@@ -135,6 +137,10 @@ module.exports = {
           "asyncArrow": "always",
         }],
         "unused-imports/no-unused-imports-ts": process.env.PROD === "true" ? "error" : "warn",
+        "import/no-cycle": [2, {
+          ignoreExternal: true,
+          maxDepth: 5,
+        }],
         "unused-imports/no-unused-vars-ts": [
           "warn", {
             "vars": "all",
@@ -192,6 +198,8 @@ module.exports = {
       extends: [
         "plugin:@typescript-eslint/recommended",
         "plugin:react/recommended",
+        "plugin:import/recommended",
+        "plugin:import/typescript",
       ],
       parserOptions: {
         ecmaVersion: 2018,
@@ -200,6 +208,7 @@ module.exports = {
       },
       rules: {
         "header/header": [2, "./license-header"],
+        "react/prop-types": "off",
         "no-invalid-this": "off",
         "@typescript-eslint/no-invalid-this": ["error"],
         "@typescript-eslint/explicit-function-return-type": "off",
@@ -221,6 +230,10 @@ module.exports = {
           "asyncArrow": "always",
         }],
         "unused-imports/no-unused-imports-ts": process.env.PROD === "true" ? "error" : "warn",
+        "import/no-cycle": [2, {
+          ignoreExternal: true,
+          maxDepth: 5,
+        }],
         "unused-imports/no-unused-vars-ts": [
           "warn", {
             "vars": "all",
