@@ -62,8 +62,8 @@ export class DetectorRegistry extends Singleton {
     return Object.fromEntries(
       iter.map(
         Object.entries(results),
-        ([key, { value }]) => [key, value]
-      )
+        ([key, { value }]) => [key, value],
+      ),
     );
   }
 }

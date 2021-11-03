@@ -93,8 +93,8 @@ export class HelmRepoManager extends Singleton {
           output.split(/\r?\n/),
           line => line.match(envVarMatcher),
         ),
-        ({ groups: { key, value }}) => [key, JSON.parse(value)]
-      )
+        ({ groups: { key, value }}) => [key, JSON.parse(value)],
+      ),
     );
   }
 

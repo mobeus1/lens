@@ -40,7 +40,7 @@ import { orderBy } from "lodash";
 async function loadAvailableHelmRepos(): Promise<HelmRepo[]> {
   const { body } = await got.get<HelmRepo[]>("https://github.com/lensapp/artifact-hub-repositories/releases/download/latest/repositories.json", {
     timeout: 10_000,
-    responseType: "json"
+    responseType: "json",
   });
 
   return orderBy(body, repo => repo.name);

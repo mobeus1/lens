@@ -51,7 +51,7 @@ export async function getMetrics(cluster: Cluster, prometheusPath: string, query
     headers: {
       Host: `${cluster.id}.${new URL(kubeProxyUrl).host}`,
     },
-    responseType: "json"
+    responseType: "json",
   });
 
   return body;
