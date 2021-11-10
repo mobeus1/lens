@@ -26,7 +26,7 @@ import fs from "fs-extra";
 import * as yaml from "js-yaml";
 import path from "path";
 import * as tempy from "tempy";
-import logger from "./logger";
+import logger from "../common/logger";
 import { appEventBus } from "../common/event-bus";
 import { cloneJsonObject } from "../common/utils";
 import type { Patch } from "rfc6902";

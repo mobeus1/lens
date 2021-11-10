@@ -29,6 +29,7 @@ import { debounce, merge } from "lodash";
 import { cssNames, disposer } from "../../utils";
 import { UserStore } from "../../../common/user-store";
 import { ThemeStore } from "../../theme.store";
+import logger from "../../../common/logger";
 
 export type MonacoEditorId = string;
 
@@ -68,11 +69,6 @@ export class MonacoEditor extends React.Component<MonacoEditorProps> {
 
   public staticId = `editor-id#${Math.round(1e7 * Math.random())}`;
   public dispose = disposer();
-
-  // TODO: investigate how to replace with "common/logger"
-  //  currently leads for stucking UI forever & infinite loop.
-  //  e.g. happens on tab change/create, maybe some other cases too.
-  logger = console;
 
   @observable.ref containerElem: HTMLElement;
   @observable.ref editor: editor.IStandaloneCodeEditor;
@@ -136,7 +132,7 @@ export class MonacoEditor extends React.Component<MonacoEditorProps> {
   }
 
   onModelChange = (model: editor.ITextModel, oldModel?: editor.ITextModel) => {
-    this.logger?.info("[MONACO]: model change", { model, oldModel }, this.logMetadata);
+    logger.info("[MONACO]: model change", { model, oldModel }, this.logMetadata);
 
     if (oldModel) {
       this.saveViewState(oldModel);
@@ -170,9 +166,9 @@ export class MonacoEditor extends React.Component<MonacoEditorProps> {
   componentDidMount() {
     try {
       this.createEditor();
-      this.logger?.info(`[MONACO]: editor did mount`, this.logMetadata);
+      logger.info(`[MONACO]: editor did mount`, this.logMetadata);
     } catch (error) {
-      this.logger?.error(`[MONACO]: mounting failed: ${error}`, this.logMetadata);
+      logger.error(`[MONACO]: mounting failed: ${error}`, this.logMetadata);
     }
   }
 
@@ -198,7 +194,7 @@ export class MonacoEditor extends React.Component<MonacoEditorProps> {
       ...this.options,
     });
 
-    this.logger?.info(`[MONACO]: editor created for language=${language}, theme=${theme}`, this.logMetadata);
+    logger.info(`[MONACO]: editor created for language=${language}, theme=${theme}`, this.logMetadata);
     this.validateLazy(); // validate initial value
     this.restoreViewState(this.model); // restore previous state if any
 

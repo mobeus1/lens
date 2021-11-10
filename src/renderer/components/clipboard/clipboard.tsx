@@ -25,7 +25,7 @@ import { findDOMNode } from "react-dom";
 import { boundMethod } from "../../../common/utils";
 import { Notifications } from "../notifications";
 import { copyToClipboard } from "../../utils/copyToClipboard";
-import logger from "../../../main/logger";
+import logger from "../../../common/logger";
 import { cssNames } from "../../utils";
 
 export interface CopyToClipboardProps {

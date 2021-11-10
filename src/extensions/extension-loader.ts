@@ -28,7 +28,7 @@ import { AppPaths } from "../common/app-paths";
 import { ClusterStore } from "../common/cluster-store";
 import { broadcastMessage, ipcMainOn, ipcRendererOn, requestMain, ipcMainHandle } from "../common/ipc";
 import { Disposer, getHostedClusterId, Singleton, toJS } from "../common/utils";
-import logger from "../main/logger";
+import logger from "../common/logger";
 import type { InstalledExtension } from "./extension-discovery";
 import { ExtensionsStore } from "./extensions-store";
 import type { LensExtension, LensExtensionConstructor, LensExtensionId } from "./lens-extension";
@@ -370,11 +370,7 @@ export class ExtensionLoader extends Singleton {
     try {
       return __non_webpack_require__(extAbsolutePath).default;
     } catch (error) {
-      if (ipcRenderer) {
-        console.error(`${logModule}: can't load ${entryPointName} for "${extension.manifest.name}": ${error.stack || error}`, extension);
-      } else {
-        logger.error(`${logModule}: can't load ${entryPointName} for "${extension.manifest.name}": ${error}`, { extension });
-      }
+      logger.error(`${logModule}: can't load ${entryPointName} for "${extension.manifest.name}": ${error.stack || error}`, extension);
     }
 
     return null;

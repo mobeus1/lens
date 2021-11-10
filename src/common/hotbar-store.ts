@@ -25,7 +25,7 @@ import migrations from "../migrations/hotbar-store";
 import { toJS } from "./utils";
 import { CatalogEntity } from "./catalog";
 import { catalogEntity } from "../main/catalog-sources/general";
-import logger from "../main/logger";
+import logger from "./logger";
 import { broadcastMessage, HotbarTooManyItems } from "./ipc";
 import { defaultHotbarCells, getEmptyHotbar, Hotbar, HotbarCreateOptions } from "./hotbar-types";
 
@@ -134,7 +134,7 @@ export class HotbarStore extends BaseStore<HotbarStoreModel> {
     const index = this.hotbars.findIndex((hotbar) => hotbar.id === id);
 
     if(index < 0) {
-      console.warn(`[HOTBAR-STORE]: cannot setHotbarName: unknown id`, { id });
+      logger.warn(`[HOTBAR-STORE]: cannot setHotbarName: unknown id`, { id });
 
       return;
     }

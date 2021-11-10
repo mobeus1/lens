@@ -30,6 +30,7 @@ import ProgressBarPlugin from "progress-bar-webpack-plugin";
 import ReactRefreshWebpackPlugin from "@pmmmwh/react-refresh-webpack-plugin";
 import MonacoWebpackPlugin from "monaco-editor-webpack-plugin";
 import getTSLoader from "./src/common/getTSLoader";
+import logger from "./src/common/logger";
 
 export default [
   webpackLensRenderer,
@@ -37,7 +38,7 @@ export default [
 
 export function webpackLensRenderer({ showVars = true } = {}): webpack.Configuration {
   if (showVars) {
-    console.info("WEBPACK:renderer", vars);
+    logger.info("WEBPACK:renderer", vars);
   }
 
   return {

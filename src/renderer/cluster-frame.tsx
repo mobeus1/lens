@@ -32,7 +32,7 @@ import { DeploymentScaleDialog } from "./components/+workloads-deployments/deplo
 import { CronJobTriggerDialog } from "./components/+workloads-cronjobs/cronjob-trigger-dialog";
 import { CustomResources } from "./components/+custom-resources/custom-resources";
 import { isAllowedResource } from "../common/utils/allowed-resource";
-import logger from "../main/logger";
+import logger from "../common/logger";
 import { webFrame } from "electron";
 import { ClusterPageRegistry, getExtensionPageUrl } from "../extensions/registries/page-registry";
 import { ExtensionLoader } from "../extensions/extension-loader";

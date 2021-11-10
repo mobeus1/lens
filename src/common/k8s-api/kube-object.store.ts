@@ -32,6 +32,7 @@ import type { KubeJsonApiData } from "./kube-json-api";
 import type { RequestInit } from "node-fetch";
 import AbortController from "abort-controller";
 import type { Patch } from "rfc6902";
+import logger from "../logger";
 
 export interface KubeObjectStoreLoadingParams {
   namespaces: string[];
@@ -249,7 +250,7 @@ export abstract class KubeObjectStore<T extends KubeObject> extends ItemStore<T>
 
       return items;
     } catch (error) {
-      console.warn("[KubeObjectStore] loadAll failed", this.api.apiBase, error);
+      logger.warn("[KubeObjectStore] loadAll failed", this.api.apiBase, error);
       this.resetOnError(error);
       this.failedLoading = true;
     } finally {

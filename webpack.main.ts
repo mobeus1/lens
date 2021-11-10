@@ -27,11 +27,12 @@ import nodeExternals from "webpack-node-externals";
 import ProgressBarPlugin from "progress-bar-webpack-plugin";
 import * as vars from "./src/common/vars";
 import getTSLoader from "./src/common/getTSLoader";
+import logger from "./src/common/logger";
 
 const configs: { (): webpack.Configuration }[] = [];
 
 configs.push((): webpack.Configuration => {
-  console.info("WEBPACK:main", vars);
+  logger.info("WEBPACK:main", vars);
 
   return {
     context: __dirname,

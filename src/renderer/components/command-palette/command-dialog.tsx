@@ -31,6 +31,7 @@ import { navigate } from "../../navigation";
 import { catalogEntityRegistry } from "../../api/catalog-entity-registry";
 import type { CatalogEntity } from "../../../common/catalog";
 import { clusterViewURL } from "../../../common/routes";
+import logger from "../../../common/logger";
 
 @observer
 export class CommandDialog extends React.Component {
@@ -53,15 +54,17 @@ export class CommandDialog extends React.Component {
       entity: this.activeEntity,
     };
 
-    return registry.getItems().filter((command) => {
-      if (command.scope === "entity" && !this.activeEntity) {
+    return registry.getItems().filter(command => {
+      const { scope, isActive = () => true, id } = command;
+
+      if (scope === "entity" && !this.activeEntity) {
         return false;
       }
 
       try {
-        return command.isActive?.(context) ?? true;
-      } catch(e) {
-        console.error(e);
+        return isActive(context);
+      } catch (error) {
+        logger.error(`[COMMAND-DIALOG]: failed to determine if command ${id} is active, defaulting to false`, error);
       }
 
       return false;
@@ -97,7 +100,7 @@ export class CommandDialog extends React.Component {
         broadcastMessage(`command-palette:run-action:${this.activeEntity.metadata.uid}`, command.id);
       }
     } catch(error) {
-      console.error("[COMMAND-DIALOG] failed to execute command", command.id, error);
+      logger.error("[COMMAND-DIALOG] failed to execute command", command.id, error);
     }
   }
 

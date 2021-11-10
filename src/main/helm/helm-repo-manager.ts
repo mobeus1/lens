@@ -26,7 +26,7 @@ import { helmCli } from "./helm-cli";
 import { Singleton } from "../../common/utils/singleton";
 import { customRequestPromise } from "../../common/request";
 import orderBy from "lodash/orderBy";
-import logger from "../logger";
+import logger from "../../common/logger";
 
 export type HelmEnv = Record<string, string> & {
   HELM_REPOSITORY_CACHE?: string;
@@ -66,7 +66,6 @@ export class HelmRepoManager extends Singleton {
   }
 
   private async init() {
-    helmCli.setLogger(logger);
     await helmCli.ensureBinary();
 
     if (!this.initialized) {

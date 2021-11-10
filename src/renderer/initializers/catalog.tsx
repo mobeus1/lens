@@ -29,6 +29,7 @@ import { WeblinkAddCommand } from "../components/catalog-entities/weblink-add-co
 import { CommandOverlay } from "../components/command-palette";
 import { loadConfigFromString } from "../../common/kube-helpers";
 import { DeleteClusterDialog } from "../components/delete-cluster-dialog";
+import logger from "../../common/logger";
 
 function initWebLinks() {
   WebLinkCategory.onAdd = () => CommandOverlay.open(<WeblinkAddCommand />);
@@ -48,11 +49,11 @@ function initKubernetesClusters() {
     });
 }
 
-async function onClusterDelete(clusterId: string) {
+async function onClusterDelete(clusterId: string): Promise<void> {
   const cluster = ClusterStore.getInstance().getById(clusterId);
 
   if (!cluster) {
-    return console.warn("[KUBERNETES-CLUSTER]: cannot delete cluster, does not exist in store", { clusterId });
+    return void logger.warn("[KUBERNETES-CLUSTER]: cannot delete cluster, does not exist in store", { clusterId });
   }
 
   const { config, error } = loadConfigFromString(await fs.promises.readFile(cluster.kubeConfigPath, "utf-8"));
