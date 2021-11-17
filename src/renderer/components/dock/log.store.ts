@@ -20,8 +20,9 @@
  */
 
 import { autorun, computed, observable, makeObservable } from "mobx";
+import { podsStore } from "../+workloads-pods/pods.store";
 
-import { IPodLogsQuery, Pod, podsApi } from "../../../common/k8s-api/endpoints";
+import { IPodLogsQuery, podsApi } from "../../../common/k8s-api/endpoints";
 import { autoBind, interval } from "../../utils";
 import { dockStore, TabId, TabKind } from "./dock.store";
 import { logTabStore } from "./log-tab.store";
@@ -122,15 +123,25 @@ export class LogStore {
    */
   async loadLogs(tabId: TabId, params: Partial<IPodLogsQuery>): Promise<string[]> {
     const data = logTabStore.getData(tabId);
-    const { selectedContainer, previous } = data;
-    const pod = new Pod(data.selectedPod);
+
+    if (!data) {
+      return [];
+    }
+
+    const { podsOwner, selectedContainer, selectedPod, previous } = data;
+    const pods = podsStore.getPodsByOwnerId(podsOwner);
+    const pod = pods.find(pod => pod.getId() === selectedPod);
+
+    if (!pod) {
+      return [];
+    }
+
     const namespace = pod.getNs();
     const name = pod.getName();
-
     const result = await podsApi.getLogs({ namespace, name }, {
       ...params,
       timestamps: true,  // Always setting timestamp to separate old logs from new ones
-      container: selectedContainer.name,
+      container: selectedContainer,
       previous,
     });
 
@@ -177,6 +188,29 @@ export class LogStore {
     stamp.setSeconds(stamp.getSeconds() + 1); // avoid duplicates from last second
 
     return stamp.toISOString();
+  }
+
+  /**
+   * Get the local formatted date of the first log line's timestamp
+   * @param tabId The ID of the tab to get the time of
+   * @returns `""` if no logs, or log does not have a timestamp
+   */
+  getFirstTime(tabId: TabId): string {
+    const logs = this.podLogs.get(tabId);
+
+    if (!logs?.length) {
+      return "";
+    }
+
+    const timestamps = this.getTimestamps(logs[0]);
+
+    if (!timestamps) {
+      return "";
+    }
+
+    const stamp = new Date(timestamps[0]);
+
+    return stamp.toLocaleString();
   }
 
   splitOutTimestamp(logs: string): [string, string] {

@@ -20,11 +20,10 @@
  */
 
 import React from "react";
-import { observable, reaction, makeObservable } from "mobx";
+import { observable, reaction, makeObservable, comparer } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 
 import { searchStore } from "../../../common/search-store";
-import { boundMethod } from "../../utils";
 import type { DockTab } from "./dock.store";
 import { InfoPanel } from "./info-panel";
 import { LogResourceSelector } from "./log-resource-selector";
@@ -32,7 +31,8 @@ import { LogList } from "./log-list";
 import { logStore } from "./log.store";
 import { LogSearch } from "./log-search";
 import { LogControls } from "./log-controls";
-import { LogTabData, logTabStore } from "./log-tab.store";
+import { logTabStore } from "./log-tab.store";
+import { podsStore } from "../+workloads-pods/pods.store";
 
 interface Props {
   className?: string
@@ -51,8 +51,22 @@ export class Logs extends React.Component<Props> {
   }
 
   componentDidMount() {
+    this.load();
+
     disposeOnUnmount(this,
-      reaction(() => this.props.tab.id, this.reload, { fireImmediately: true }),
+      reaction(
+        () => [this.tabId, logTabStore.getData(this.tabId)] as const,
+        ([curTabId], [oldTabId]) => {
+          if (curTabId !== oldTabId) {
+            logStore.clearLogs(this.tabId);
+          }
+
+          this.load();
+        },
+        {
+          equals: comparer.structural,
+        },
+      ),
     );
   }
 
@@ -66,25 +80,10 @@ export class Logs extends React.Component<Props> {
     this.isLoading = false;
   };
 
-  reload = async () => {
-    logStore.clearLogs(this.tabId);
-    await this.load();
-  };
-
-  /**
-   * A function for various actions after search is happened
-   * @param query {string} A text from search field
-   */
-  @boundMethod
-  onSearch() {
-    this.toOverlay();
-  }
-
   /**
    * Scrolling to active overlay (search word highlight)
    */
-  @boundMethod
-  toOverlay() {
+  onSearch = () => {
     const { activeOverlayLine } = searchStore;
 
     if (!this.logListElement.current || activeOverlayLine === undefined) return;
@@ -97,54 +96,53 @@ export class Logs extends React.Component<Props> {
       if (!overlay) return;
       overlay.scrollIntoViewIfNeeded();
     }, 100);
-  }
+  };
 
-  renderResourceSelector(data?: LogTabData) {
+  render() {
+    const { logs, logsWithoutTimestamps } = logStore;
+    const data = logTabStore.getData(this.tabId);
+
     if (!data) {
       return null;
     }
 
-    const logs = logStore.logs;
-    const searchLogs = data.showTimestamps ? logs : logStore.logsWithoutTimestamps;
-    const controls = (
-      <div className="flex gaps">
-        <LogResourceSelector
-          tabId={this.tabId}
-          tabData={data}
-          save={newData => logTabStore.setData(this.tabId, { ...data, ...newData })}
-          reload={this.reload}
-        />
-        <LogSearch
-          onSearch={this.onSearch}
-          logs={searchLogs}
-          toPrevOverlay={this.toOverlay}
-          toNextOverlay={this.toOverlay}
-        />
-      </div>
-    );
+    const { podsOwner, selectedContainer, selectedPod, showTimestamps, previous } = data;
+    const searchLogs = showTimestamps ? logs : logsWithoutTimestamps;
+    const pods = podsStore.getPodsByOwnerId(podsOwner);
+    const pod = pods.find(pod => pod.getId() === selectedPod);
 
-    return (
-      <InfoPanel
-        tabId={this.props.tab.id}
-        controls={controls}
-        showSubmitClose={false}
-        showButtons={false}
-        showStatusPanel={false}
-      />
-    );
-  }
-
-  render() {
-    const logs = logStore.logs;
-    const data = logTabStore.getData(this.tabId);
-
-    if (!data) {
-      this.reload();
+    if (!pod) {
+      return (
+        <div className="PodLogs flex column">
+          <p>Pod with ID {selectedPod} is no longer found under owner {podsOwner}</p>
+        </div>
+      );
     }
 
     return (
       <div className="PodLogs flex column">
-        {this.renderResourceSelector(data)}
+        <InfoPanel
+          tabId={this.props.tab.id}
+          controls={
+            <div className="flex gaps">
+              <LogResourceSelector
+                tabId={this.tabId}
+                pod={pod}
+                pods={pods}
+                selectedContainer={selectedContainer}
+              />
+              <LogSearch
+                onSearch={this.onSearch}
+                logs={searchLogs}
+                toPrevOverlay={this.onSearch}
+                toNextOverlay={this.onSearch}
+              />
+            </div>
+          }
+          showSubmitClose={false}
+          showButtons={false}
+          showStatusPanel={false}
+        />
         <LogList
           logs={logs}
           id={this.tabId}
@@ -153,10 +151,9 @@ export class Logs extends React.Component<Props> {
           ref={this.logListElement}
         />
         <LogControls
-          logs={logs}
-          tabData={data}
-          save={newData => logTabStore.setData(this.tabId, { ...data, ...newData })}
-          reload={this.reload}
+          tabId={this.tabId}
+          pod={pod}
+          preferences={{ previous, showTimestamps }}
         />
       </div>
     );

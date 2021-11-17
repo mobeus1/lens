@@ -247,7 +247,7 @@ export class LogList extends React.Component<Props> {
     if (!this.logs.length) {
       return (
         <div className="LogList flex box grow align-center justify-center">
-          There are no logs available for container
+          There are no logs available for container {logTabStore.getData(this.props.id).selectedContainer}
         </div>
       );
     }

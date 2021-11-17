@@ -28,10 +28,10 @@ export interface DockTabStoreOptions {
   storageKey?: string; // save data to persistent storage under the key
 }
 
-export type DockTabStorageState<T> = Record<TabId, T>;
+type PartialObject<T> = T extends object ? Partial<T> : never;
 
 export class DockTabStore<T> {
-  protected storage?: StorageHelper<DockTabStorageState<T>>;
+  protected storage?: StorageHelper<Record<TabId, T>>;
   protected data = observable.map<TabId, T>();
 
   constructor(protected options: DockTabStoreOptions = {}) {
@@ -75,7 +75,7 @@ export class DockTabStore<T> {
     return data;
   }
 
-  protected toJSON(): DockTabStorageState<T> {
+  protected toJSON(): Record<TabId, T> {
     const deepCopy = toJS(this.data);
 
     deepCopy.forEach((tabData, key) => {
@@ -95,6 +95,17 @@ export class DockTabStore<T> {
 
   setData(tabId: TabId, data: T) {
     this.data.set(tabId, data);
+  }
+
+  /**
+   * Do a partial update for the dock tab data.
+   *
+   * NOTE: only supported for object types
+   * @param tabId The ID of the tab to merge data with
+   * @param data The partial value of the data
+   */
+  mergeData(tabId: TabId, data: PartialObject<T>) {
+    Object.assign(this.data.get(tabId), data);
   }
 
   clearData(tabId: TabId) {

@@ -19,18 +19,25 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import type { IPodContainer } from "../../../../common/k8s-api/endpoints";
+
 export const dockerPod = {
   apiVersion: "v1",
-  kind: "dummy",
+  kind: "Pod",
   metadata: {
     uid: "dockerExporter",
     name: "dockerExporter",
     creationTimestamp: "dummy",
     resourceVersion: "dummy",
     namespace: "default",
+    ownerReferences: [
+      {
+        uid: "dockerExporterOwner",
+      },
+    ],
   },
   spec: {
-    initContainers: [] as any,
+    initContainers: [] as IPodContainer[],
     containers: [
       {
         name: "docker-exporter",

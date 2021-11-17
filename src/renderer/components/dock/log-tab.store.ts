@@ -19,31 +19,67 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import Joi from "joi";
 import uniqueId from "lodash/uniqueId";
-import { reaction } from "mobx";
-import { podsStore } from "../+workloads-pods/pods.store";
-
-import { IPodContainer, Pod } from "../../../common/k8s-api/endpoints";
-import type { WorkloadKubeObject } from "../../../common/k8s-api/workload-kube-object";
+import { action } from "mobx";
+import type { IPodContainer, Pod } from "../../../common/k8s-api/endpoints";
 import logger from "../../../common/logger";
 import { DockTabStore } from "./dock-tab.store";
-import { dockStore, DockTabCreateSpecific, TabKind } from "./dock.store";
+import { dockStore, TabKind } from "./dock.store";
 
 export interface LogTabData {
-  pods: Pod[];
-  selectedPod: Pod;
-  selectedContainer: IPodContainer
-  showTimestamps?: boolean
-  previous?: boolean
+  /**
+   * The pod owner ID
+   */
+  podsOwner: string;
+
+  /**
+   * The ID of the pod from the list of pods owned by `.podsOwner`
+   */
+  selectedPod: string;
+
+  /**
+   * The name of the container within the selected pod.
+   *
+   * Note: container names are guaranteed unique
+   */
+  selectedContainer?: string;
+
+  /**
+   * Whether to show timestamps inline with the logs
+   */
+  showTimestamps: boolean;
+
+  /**
+   * Query for getting logs of the previous container restart
+   */
+  previous: boolean;
 }
 
-interface PodLogsTabData {
+const logTabDataValidator = Joi.object({
+  podsOwner: Joi
+    .string()
+    .required(),
+  selectedPod: Joi
+    .string()
+    .required(),
+  selectedContainer: Joi
+    .string()
+    .optional(),
+  showTimestamps: Joi
+    .boolean()
+    .required(),
+  previous: Joi
+    .boolean()
+    .required(),
+});
+
+/**
+ * Data for creating a pod logs tab based on a specific pod
+ */
+export interface PodLogsTabData {
   selectedPod: Pod
   selectedContainer: IPodContainer
-}
-
-interface WorkloadLogsTabData {
-  workload: WorkloadKubeObject
 }
 
 export class LogTabStore extends DockTabStore<LogTabData> {
@@ -51,97 +87,88 @@ export class LogTabStore extends DockTabStore<LogTabData> {
     super({
       storageKey: "pod_logs",
     });
-
-    reaction(() => podsStore.items.length, () => this.updateTabsData());
   }
 
-  createPodTab({ selectedPod, selectedContainer }: PodLogsTabData): string {
+  createPodTab(tabData: PodLogsTabData): string {
+    if (!tabData || typeof tabData !== "object") {
+      throw new TypeError("createPodTab provided non-object tabData");
+    }
+
+    const { selectedPod, selectedContainer } = tabData;
+
+    if (!selectedPod || typeof selectedPod !== "object") {
+      throw new TypeError("selectedPod is not defined");
+    }
+
+    if (!selectedContainer || typeof selectedContainer !== "object") {
+      throw new TypeError("selectedContainer is not defined");
+
+    }
+
     const podOwner = selectedPod.getOwnerRefs()[0];
-    const pods = podsStore.getPodsByOwnerId(podOwner?.uid);
-    const title = `Pod ${selectedPod.getName()}`;
 
-    return this.createLogsTab(title, {
-      pods: pods.length ? pods : [selectedPod],
-      selectedPod,
-      selectedContainer,
+    if (!podOwner) {
+      throw new Error(`Pod ${selectedPod.getId()} does not have any owner refs`);
+    }
+
+    return this.createLogsTab(`Pod ${selectedPod.getName()}`, {
+      podsOwner: podOwner.uid,
+      selectedPod: selectedPod.getId(),
+      selectedContainer: selectedContainer.name,
+      showTimestamps: false,
+      previous: false,
     });
   }
 
-  createWorkloadTab({ workload }: WorkloadLogsTabData): void {
-    const pods = podsStore.getPodsByOwnerId(workload.getId());
+  @action
+  changeSelectedPod(tabId: string, pod: Pod): void {
+    const oldSelectedPod = this.getData(tabId).selectedPod;
 
-    if (!pods.length) return;
+    if (pod.getId() === oldSelectedPod) {
+      // Do nothing
+      return;
+    }
 
-    const selectedPod = pods[0];
-    const selectedContainer = selectedPod.getAllContainers()[0];
-    const title = `${workload.kind} ${selectedPod.getName()}`;
-
-    this.createLogsTab(title, {
-      pods,
-      selectedPod,
-      selectedContainer,
-    });
+    this.mergeData(tabId, { selectedPod: pod.getId(), selectedContainer: pod.getContainers()[0]?.name });
+    dockStore.renameTab(tabId, `Pod ${pod.getName()}`);
   }
-
-  renameTab(tabId: string) {
-    const { selectedPod } = this.getData(tabId);
-
-    dockStore.renameTab(tabId, `Pod ${selectedPod.metadata.name}`);
-  }
-
-  private createDockTab(tabParams: DockTabCreateSpecific) {
-    dockStore.createTab({
-      ...tabParams,
-      kind: TabKind.POD_LOGS,
-    }, false);
-  } 
 
   private createLogsTab(title: string, data: LogTabData): string {
     const id = uniqueId("log-tab-");
 
-    this.createDockTab({ id, title });
-    this.setData(id, {
-      ...data,
-      showTimestamps: false,
-      previous: false,
-    });
+    dockStore.createTab({
+      id,
+      title,
+      kind: TabKind.POD_LOGS,
+    }, false);
+    this.setData(id, data);
 
     return id;
   }
 
-  private updateTabsData() {
-    for (const [tabId, tabData] of this.data) {
-      try {
-        if (!tabData.selectedPod) {
-          tabData.selectedPod = tabData.pods[0];
-        }
-
-        const pod = new Pod(tabData.selectedPod);
-        const pods = podsStore.getPodsByOwnerId(pod.getOwnerRefs()[0]?.uid);
-        const isSelectedPodInList = pods.find(item => item.getId() == pod.getId());
-        const selectedPod = isSelectedPodInList ? pod : pods[0];
-        const selectedContainer = isSelectedPodInList ? tabData.selectedContainer : pod.getAllContainers()[0];
-  
-        if (pods.length > 0) {
-          this.setData(tabId, {
-            ...tabData,
-            selectedPod,
-            selectedContainer,
-            pods,
-          });
-  
-          this.renameTab(tabId);
-        } else {
-          this.closeTab(tabId);
-        }
-      } catch (error) {
-        logger.error(`[LOG-TAB-STORE]: failed to set data for tabId=${tabId} deleting`, error);
-        this.data.delete(tabId);
-      }
+  /**
+   * Gets the data for `tabId` and validates that is is type correct, returning
+   * `undefined` if incorrect.
+   * @param tabId The tab to get data for
+   */
+  public getData(tabId: string): LogTabData | undefined {
+    if (!this.data.has(tabId)) {
+      return undefined;
     }
+
+    const { value, error } = logTabDataValidator.validate(super.getData(tabId));
+
+    if (error) {
+      logger.warn(`[LOG-TAB-STORE]: data for ${tabId} was invalid`, error);
+      this.closeTab(tabId);
+
+      return undefined;
+    }
+
+    return value;
   }
 
-  private closeTab(tabId: string) {
+  public closeTab(tabId: string) {
     this.clearData(tabId);
     dockStore.closeTab(tabId);
   }
