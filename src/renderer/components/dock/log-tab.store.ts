@@ -24,8 +24,8 @@ import uniqueId from "lodash/uniqueId";
 import { action } from "mobx";
 import type { IPodContainer, Pod } from "../../../common/k8s-api/endpoints";
 import logger from "../../../common/logger";
-import { DockTabStore } from "./dock-tab.store";
-import { dockStore, TabKind } from "./dock.store";
+import { DockTabStore, DockTabStoreOptions } from "./dock-tab.store";
+import { dockStore, DockTab, DockTabCreate, TabId, TabKind } from "./dock.store";
 
 export interface LogTabData {
   /**
@@ -82,26 +82,33 @@ export interface PodLogsTabData {
   selectedContainer: IPodContainer
 }
 
+export interface DockManager {
+  renameTab(tabId: TabId, name: string): void;
+  createTab(rawTabDesc: DockTabCreate, addNumber?: boolean): DockTab;
+  closeTab(tabId: TabId): void;
+}
+
 export class LogTabStore extends DockTabStore<LogTabData> {
-  constructor() {
+  constructor(params: Omit<DockTabStoreOptions, "storageKey"> = {}, protected dockManager: DockManager = dockStore) {
     super({
+      ...params,
       storageKey: "pod_logs",
     });
   }
 
   createPodTab(tabData: PodLogsTabData): string {
     if (!tabData || typeof tabData !== "object") {
-      throw new TypeError("createPodTab provided non-object tabData");
+      throw new TypeError("tabData is not an object");
     }
 
     const { selectedPod, selectedContainer } = tabData;
 
     if (!selectedPod || typeof selectedPod !== "object") {
-      throw new TypeError("selectedPod is not defined");
+      throw new TypeError("selectedPod is not an object");
     }
 
     if (!selectedContainer || typeof selectedContainer !== "object") {
-      throw new TypeError("selectedContainer is not defined");
+      throw new TypeError("selectedContainer is not an object");
 
     }
 
@@ -130,13 +137,13 @@ export class LogTabStore extends DockTabStore<LogTabData> {
     }
 
     this.mergeData(tabId, { selectedPod: pod.getId(), selectedContainer: pod.getContainers()[0]?.name });
-    dockStore.renameTab(tabId, `Pod ${pod.getName()}`);
+    this.dockManager.renameTab(tabId, `Pod ${pod.getName()}`);
   }
 
   private createLogsTab(title: string, data: LogTabData): string {
     const id = uniqueId("log-tab-");
 
-    dockStore.createTab({
+    this.dockManager.createTab({
       id,
       title,
       kind: TabKind.POD_LOGS,
@@ -170,7 +177,7 @@ export class LogTabStore extends DockTabStore<LogTabData> {
 
   public closeTab(tabId: string) {
     this.clearData(tabId);
-    dockStore.closeTab(tabId);
+    this.dockManager.closeTab(tabId);
   }
 }
 
