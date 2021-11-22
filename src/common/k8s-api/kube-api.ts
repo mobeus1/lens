@@ -188,15 +188,13 @@ export function forRemoteCluster<T extends KubeObject, Y extends KubeApi<T> = Ku
 }
 
 export function ensureObjectSelfLink(api: KubeApi<KubeObject>, object: KubeJsonApiData) {
-  if (!object.metadata.selfLink) {
-    object.metadata.selfLink = createKubeApiURL({
-      apiPrefix: api.apiPrefix,
-      apiVersion: api.apiVersionWithGroup,
-      resource: api.apiResource,
-      namespace: api.isNamespaced ? object.metadata.namespace : undefined,
-      name: object.metadata.name,
-    });
-  }
+  object.metadata.selfLink ||= createKubeApiURL({
+    apiPrefix: api.apiPrefix,
+    apiVersion: api.apiVersionWithGroup,
+    resource: api.apiResource,
+    namespace: object.metadata.namespace || undefined,
+    name: object.metadata.name,
+  });
 }
 
 export type KubeApiWatchCallback = (data: IKubeWatchEvent<KubeJsonApiData>, error: any) => void;
@@ -214,7 +212,7 @@ export type KubeApiWatchOptions = {
 
 export type KubeApiPatchType = "merge" | "json" | "strategic";
 
-const patchTypeHeaders: Record<KubeApiPatchType, string> = {
+export const patchTypeHeaders: Record<KubeApiPatchType, string> = {
   "merge": "application/merge-patch+json",
   "json": "application/json-patch+json",
   "strategic": "application/strategic-merge-patch+json",

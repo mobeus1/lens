@@ -37,7 +37,7 @@ export { Secret, secretsApi } from "../../common/k8s-api/endpoints/secret.api";
 export { ReplicaSet, replicaSetApi } from "../../common/k8s-api/endpoints/replica-set.api";
 export { ResourceQuota, resourceQuotaApi } from "../../common/k8s-api/endpoints/resource-quota.api";
 export { LimitRange, limitRangeApi } from "../../common/k8s-api/endpoints/limit-range.api";
-export { HorizontalPodAutoscaler, hpaApi } from "../../common/k8s-api/endpoints/hpa.api";
+export { HorizontalPodAutoscaler, hpaApi } from "../../common/k8s-api/endpoints/horizontal-pod-autoscaler.api";
 export { PodDisruptionBudget, pdbApi } from "../../common/k8s-api/endpoints/poddisruptionbudget.api";
 export { Service, serviceApi } from "../../common/k8s-api/endpoints/service.api";
 export { Endpoint, endpointApi } from "../../common/k8s-api/endpoints/endpoint.api";

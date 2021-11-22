@@ -24,15 +24,13 @@ import "./edit-resource.scss";
 import React from "react";
 import { computed, makeObservable, observable } from "mobx";
 import { observer } from "mobx-react";
-import yaml from "js-yaml";
 import type { DockTab } from "./dock.store";
 import { editResourceStore } from "./edit-resource.store";
 import { InfoPanel } from "./info-panel";
 import { Badge } from "../badge";
 import { EditorPanel } from "./editor-panel";
 import { Spinner } from "../spinner";
-import type { KubeObject } from "../../../common/k8s-api/kube-object";
-import { createPatch } from "rfc6902";
+import type { RawKubeObject } from "../../../common/k8s-api/kube-object";
 
 interface Props {
   tab: DockTab;
@@ -55,8 +53,12 @@ export class EditResource extends React.Component<Props> {
     return editResourceStore.isReady(this.tabId);
   }
 
-  get resource(): KubeObject | undefined {
+  get resource(): RawKubeObject | undefined {
     return editResourceStore.getResource(this.tabId);
+  }
+
+  get isClean(): boolean {
+    return editResourceStore.isClean(this.tabId);
   }
 
   @computed get draft(): string {
@@ -64,15 +66,9 @@ export class EditResource extends React.Component<Props> {
       return ""; // wait until tab's data and kube-object resource are loaded
     }
 
-    const editData = editResourceStore.getData(this.tabId);
+    const { firstDraft, draft } = editResourceStore.getData(this.tabId);
 
-    if (typeof editData.draft === "string") {
-      return editData.draft;
-    }
-
-    const firstDraft = yaml.dump(this.resource.toPlainObject()); // dump resource first time
-
-    return editData.firstDraft = firstDraft;
+    return draft ?? firstDraft;
   }
 
   saveDraft(draft: string) {
@@ -93,23 +89,11 @@ export class EditResource extends React.Component<Props> {
       return null;
     }
 
-    const store = editResourceStore.getStore(this.tabId);
-    const currentVersion = yaml.load(this.draft);
-    const firstVersion = yaml.load(editResourceStore.getData(this.tabId).firstDraft ?? this.draft);
-    const patches = createPatch(firstVersion, currentVersion);
-    const updatedResource = await store.patch(this.resource, patches);
-
-    editResourceStore.clearInitialDraft(this.tabId);
-
-    return (
-      <p>
-        {updatedResource.kind} <b>{updatedResource.getName()}</b> updated.
-      </p>
-    );
+    return editResourceStore.commitEdits(this.tabId);
   };
 
   render() {
-    const { tabId, error, onChange, onError, save, draft, isReadyForEditing, resource } = this;
+    const { tabId, error, onChange, onError, save, draft, isClean, isReadyForEditing, resource } = this;
 
     if (!isReadyForEditing) {
       return <Spinner center/>;
@@ -123,11 +107,12 @@ export class EditResource extends React.Component<Props> {
           submit={save}
           submitLabel="Save"
           submittingMessage="Applying.."
+          disableSubmit={isClean}
           controls={(
             <div className="resource-info flex gaps align-center">
               <span>Kind:</span><Badge label={resource.kind}/>
-              <span>Name:</span><Badge label={resource.getName()}/>
-              <span>Namespace:</span><Badge label={resource.getNs() || "global"}/>
+              <span>Name:</span><Badge label={resource.metadata.name}/>
+              <span>Namespace:</span><Badge label={resource.metadata.namespace || "global"}/>
             </div>
           )}
         />

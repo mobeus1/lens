@@ -21,11 +21,11 @@
 
 export type Disposer = () => void;
 
-interface Extendable<T> {
-  push(...vals: T[]): void;
+interface Extendable {
+  push(...vals: (Disposer | { dispose: Disposer })[]): void;
 }
 
-export type ExtendableDisposer = Disposer & Extendable<Disposer>;
+export type ExtendableDisposer = Disposer & Extendable;
 
 export function disposer(...args: Disposer[]): ExtendableDisposer {
   const res = () => {
@@ -33,8 +33,14 @@ export function disposer(...args: Disposer[]): ExtendableDisposer {
     args.length = 0;
   };
 
-  res.push = (...vals: Disposer[]) => {
-    args.push(...vals);
+  res.push = (...vals: (Disposer | { dispose: Disposer })[]) => {
+    for (const val of vals) {
+      if (typeof val === "function") {
+        args.push(val);
+      } else {
+        args.push(() => val.dispose());
+      }
+    }
   };
 
   return res;

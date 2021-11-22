@@ -132,6 +132,15 @@ export interface LabelSelector {
   matchExpressions?: LabelMatchExpression[];
 }
 
+export interface RawKubeObject<Metadata extends KubeObjectMetadata = KubeObjectMetadata, Status = Record<string, any>, Spec = Record<string, any>> {
+  apiVersion: string;
+  kind: string;
+  metadata: Metadata;
+  status?: Status;
+  spec?: Spec;
+  managedFields?: any;
+}
+
 export class KubeObject<Metadata extends KubeObjectMetadata = KubeObjectMetadata, Status = any, Spec = any> implements ItemObject {
   static readonly kind?: string;
   static readonly namespaced?: boolean;
@@ -225,23 +234,6 @@ export class KubeObject<Metadata extends KubeObjectMetadata = KubeObjectMetadata
 
     return Object.entries(labels).map(([name, value]) => `${name}=${value}`);
   }
-
-  /**
-   * These must be RFC6902 compliant paths
-   */
-  private static readonly nonEditablePathPrefixes = [
-    "/metadata/managedFields",
-    "/status",
-  ];
-  private static readonly nonEditablePaths = new Set([
-    "/apiVersion",
-    "/kind",
-    "/metadata/name",
-    "/metadata/selfLink",
-    "/metadata/resourceVersion",
-    "/metadata/uid",
-    ...KubeObject.nonEditablePathPrefixes,
-  ]);
 
   constructor(data: KubeJsonApiData) {
     if (typeof data !== "object") {
@@ -339,18 +331,6 @@ export class KubeObject<Metadata extends KubeObjectMetadata = KubeObjectMetadata
    * @deprecated use KubeApi.patch instead
    */
   async patch(patch: Patch): Promise<KubeJsonApiData | null> {
-    for (const op of patch) {
-      if (KubeObject.nonEditablePaths.has(op.path)) {
-        throw new Error(`Failed to update ${this.kind}: JSON pointer ${op.path} has been modified`);
-      }
-
-      for (const pathPrefix of KubeObject.nonEditablePathPrefixes) {
-        if (op.path.startsWith(`${pathPrefix}/`)) {
-          throw new Error(`Failed to update ${this.kind}: Child JSON pointer of ${op.path} has been modified`);
-        }
-      }
-    }
-
     return resourceApplierApi.patch(this.getName(), this.kind, this.getNs(), patch);
   }
 

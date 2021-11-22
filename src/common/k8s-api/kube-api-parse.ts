@@ -22,8 +22,6 @@
 // Parse kube-api path and get api-version, group, etc.
 
 import { splitArray } from "../utils";
-import { isDebugging } from "../vars";
-import logger from "../../main/logger";
 import { inspect } from "util";
 
 export interface IKubeObjectRef {
@@ -48,18 +46,14 @@ export interface IKubeApiParsed extends IKubeApiLinkRef {
 }
 
 export function parseKubeApi(path: string): IKubeApiParsed {
-  if (!isDebugging) {
-    return _parseKubeApi(path);
-  }
-
   try {
     const res = _parseKubeApi(path);
 
-    logger.debug(`parseKubeApi(${inspect(path, false, null, false)}) -> ${inspect(res, false, null, false)}`);
+    console.debug(`parseKubeApi(${inspect(path, false, null, false)}) -> ${inspect(res, false, null, false)}`);
 
     return res;
   } catch (error) {
-    logger.debug(`parseKubeApi(${inspect(path, false, null, false)}) threw: ${error}`);
+    console.debug(`parseKubeApi(${inspect(path, false, null, false)}) threw: ${error}`);
 
     throw error;
   }

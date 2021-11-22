@@ -32,7 +32,7 @@ export * from "./daemon-set.api";
 export * from "./deployment.api";
 export * from "./endpoint.api";
 export * from "./events.api";
-export * from "./hpa.api";
+export * from "./horizontal-pod-autoscaler.api";
 export * from "./ingress.api";
 export * from "./job.api";
 export * from "./limit-range.api";

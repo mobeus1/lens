@@ -76,7 +76,7 @@ export type { SecretsStore } from "../../renderer/components/+config-secrets/sec
 export type { ReplicaSetStore } from "../../renderer/components/+workloads-replicasets/replicasets.store";
 export type { ResourceQuotasStore } from "../../renderer/components/+config-resource-quotas/resource-quotas.store";
 export type { LimitRangesStore } from "../../renderer/components/+config-limit-ranges/limit-ranges.store";
-export type { HPAStore } from "../../renderer/components/+config-autoscalers/hpa.store";
+export type { HPAStore } from "../../renderer/components/+config-autoscalers/horizontal-pod-autoscaler.store";
 export type { PodDisruptionBudgetsStore } from "../../renderer/components/+config-pod-disruption-budgets/pod-disruption-budgets.store";
 export type { ServiceStore } from "../../renderer/components/+network-services/services.store";
 export type { EndpointStore } from "../../renderer/components/+network-endpoints/endpoints.store";

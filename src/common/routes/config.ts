@@ -22,7 +22,7 @@
 import type { RouteProps } from "react-router";
 import type { URLParams } from "../utils/buildUrl";
 import { configMapsRoute, configMapsURL } from "./config-maps";
-import { hpaRoute } from "./hpa";
+import { hpaRoute } from "./horizontal-pod-autoscaler";
 import { limitRangesRoute } from "./limit-ranges";
 import { pdbRoute } from "./pod-disruption-budgets";
 import { resourceQuotaRoute } from "./resource-quotas";
