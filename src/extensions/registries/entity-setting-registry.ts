@@ -46,12 +46,15 @@ export interface RegisteredEntitySetting extends EntitySettingRegistration {
   id: string;
 }
 
-export class EntitySettingRegistry extends BaseRegistry<EntitySettingRegistration, RegisteredEntitySetting> {
-  getRegisteredItem(item: EntitySettingRegistration): RegisteredEntitySetting {
-    return {
-      id: item.id || item.title.toLowerCase(),
-      ...item,
-    };
+export class EntitySettingRegistry extends BaseRegistry<EntitySettingRegistration, RegisteredEntitySetting, string> {
+  constructor() {
+    super({
+      getRegisteredItem: item => {
+        const id = item.id || item.title.toLowerCase();
+
+        return [id, { ...item, id }];
+      },
+    });
   }
 
   getItemsForKind(kind: string, apiVersion: string, source?: string) {

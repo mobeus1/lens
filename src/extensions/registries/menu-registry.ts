@@ -29,4 +29,9 @@ export interface MenuRegistration extends MenuItemConstructorOptions {
 }
 
 export class MenuRegistry extends BaseRegistry<MenuRegistration> {
+  constructor() {
+    super({
+      getRegisteredItem: item => [item, item],
+    });
+  }
 }

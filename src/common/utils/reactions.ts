@@ -18,35 +18,25 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import type { IReactionPublic, IReactionOptions, IReactionDisposer } from "mobx";
+import { reaction } from "mobx";
+import type { Disposer } from "./disposer";
 
-import type React from "react";
-import type { KubeObjectDetailsProps } from "../renderer-api/components";
-import type { KubeObject } from "../renderer-api/k8s-api";
-import { BaseRegistry } from "./base-registry";
+/**
+ * Similar to mobx's builtin `reaction` function but supports returning a
+ * disposer from `effect` that will be cancelled everytime a new reaction is
+ * fired and when the reaction is disposed.
+ */
+export function disposingReaction<T, FireImmediately extends boolean = false>(expression: (r: IReactionPublic) => T, effect: (arg: T, prev: T, r: IReactionPublic) => Disposer, opts?: IReactionOptions<T, FireImmediately>): IReactionDisposer {
+  let prevDisposer: Disposer;
 
-export interface KubeObjectDetailComponents<T extends KubeObject = KubeObject> {
-  Details: React.ComponentType<KubeObjectDetailsProps<T>>;
-}
+  const reactionDisposer = reaction(expression, (arg: T, prev: T, r: IReactionPublic) => {
+    prevDisposer?.();
+    prevDisposer = effect(arg, prev, r);
+  }, opts);
 
-export interface KubeObjectDetailRegistration {
-  kind: string;
-  apiVersions: string[];
-  components: KubeObjectDetailComponents<KubeObject>;
-  priority?: number;
-}
-
-export class KubeObjectDetailRegistry extends BaseRegistry<KubeObjectDetailRegistration> {
-  constructor() {
-    super({
-      getRegisteredItem: item => [item, item],
-    });
-  }
-
-  getItemsForKind(kind: string, apiVersion: string) {
-    const items = this.getItems().filter((item) => {
-      return item.kind === kind && item.apiVersions.includes(apiVersion);
-    });
-
-    return items.sort((a, b) => (b.priority ?? 50) - (a.priority ?? 50));
-  }
+  return Object.assign(() => {
+    reactionDisposer();
+    prevDisposer?.();
+  }, reactionDisposer);
 }

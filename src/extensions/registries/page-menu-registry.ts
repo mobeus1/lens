@@ -39,6 +39,12 @@ export interface ClusterPageMenuComponents {
 }
 
 export class ClusterPageMenuRegistry extends BaseRegistry<ClusterPageMenuRegistration> {
+  constructor() {
+    super({
+      getRegisteredItem: item => [item, item],
+    });
+  }
+
   add(items: ClusterPageMenuRegistration[], ext: LensExtension) {
     const normalizedItems = items.map(menuItem => {
       menuItem.target = {

@@ -29,6 +29,12 @@ export interface KubeObjectStatusRegistration {
 }
 
 export class KubeObjectStatusRegistry extends BaseRegistry<KubeObjectStatusRegistration> {
+  constructor() {
+    super({
+      getRegisteredItem: item => [item, item],
+    });
+  }
+
   getItemsForKind(kind: string, apiVersion: string) {
     return this.getItems()
       .filter((item) => (

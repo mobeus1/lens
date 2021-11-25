@@ -31,4 +31,9 @@ export interface TopBarRegistration {
 }
 
 export class TopBarRegistry extends BaseRegistry<TopBarRegistration> {
+  constructor() {
+    super({
+      getRegisteredItem: item => [item, item],
+    });
+  }
 }

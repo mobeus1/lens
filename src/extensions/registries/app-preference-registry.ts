@@ -38,11 +38,14 @@ export interface RegisteredAppPreference extends AppPreferenceRegistration {
   id: string;
 }
 
-export class AppPreferenceRegistry extends BaseRegistry<AppPreferenceRegistration, RegisteredAppPreference> {
-  getRegisteredItem(item: AppPreferenceRegistration): RegisteredAppPreference {
-    return {
-      id: item.id || item.title.toLowerCase().replace(/[^0-9a-zA-Z]+/g, "-"),
-      ...item,
-    };
+export class AppPreferenceRegistry extends BaseRegistry<AppPreferenceRegistration, RegisteredAppPreference, string> {
+  constructor() {
+    super({
+      getRegisteredItem: item => {
+        const id = item.id || item.title.toLowerCase().replace(/[^0-9a-zA-Z]+/g, "-");
+
+        return [id, { ...item, id }];
+      },
+    });
   }
 }

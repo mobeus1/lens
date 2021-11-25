@@ -22,31 +22,67 @@
 // Extensions API -> Commands
 
 import { BaseRegistry } from "./base-registry";
-import type { LensExtension } from "../lens-extension";
 import type { CatalogEntity } from "../../common/catalog";
 
 export interface CommandContext {
   entity?: CatalogEntity;
 }
 
+export interface CommandActionNavigateOptions {
+  /**
+   * If `true` then the navigate will only navigate on the root frame and not
+   * within a cluster
+   * @default false
+   */
+  forceRootFrame?: boolean;
+}
+
+export interface CommandActionContext extends CommandContext {
+  navigate: (url: string, opts?: CommandActionNavigateOptions) => void;
+}
+
 export interface CommandRegistration {
+  /**
+   * The ID of the command, must be globally unique
+   */
   id: string;
-  title: string;
-  scope: "entity" | "global";
-  action: (context: CommandContext) => void;
+
+  /**
+   * The display name of the command in the command pallet
+   */
+  title: string | ((context: CommandContext) => string);
+
+  /**
+   * @deprecated use `isActive` instead since there is always an entity active
+   */
+  scope?: "global" | "entity";
+
+  /**
+   * The function to run when this command is selected
+   */
+  action: (context: CommandActionContext) => void;
+
+  /**
+   * A function that determines if the command is active.
+   *
+   * @default () => true
+   */
   isActive?: (context: CommandContext) => boolean;
 }
 
-export class CommandRegistry extends BaseRegistry<CommandRegistration> {
-  add(items: CommandRegistration | CommandRegistration[], extension?: LensExtension) {
-    const itemArray = [items].flat();
+export type RegisteredCommand = Required<Omit<CommandRegistration, "scope">>;
 
-    const newIds = itemArray.map((item) => item.id);
-    const currentIds = this.getItems().map((item) => item.id);
-
-    const filteredIds = newIds.filter((id) => !currentIds.includes(id));
-    const filteredItems = itemArray.filter((item) => filteredIds.includes(item.id));
-
-    return super.add(filteredItems, extension);
+export class CommandRegistry extends BaseRegistry<CommandRegistration, RegisteredCommand, string> {
+  constructor() {
+    super({
+      getRegisteredItem: ({ scope, isActive = () => true, ...item }) => (
+        [item.id, { isActive, ...item }]
+      ),
+    });
   }
 }
+
+export function isKubernetesClusterActive(context: CommandContext): boolean {
+  return context.entity?.kind === "KubernetesCluster";
+}
+

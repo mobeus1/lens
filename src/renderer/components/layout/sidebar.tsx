@@ -24,7 +24,7 @@ import type { TabLayoutRoute } from "./tab-layout";
 
 import React from "react";
 import { disposeOnUnmount, observer } from "mobx-react";
-import { cssNames } from "../../utils";
+import { cssNames, disposingReaction } from "../../utils";
 import { Icon } from "../icon";
 import { Workloads } from "../+workloads";
 import { UserManagement } from "../+user-management";
@@ -32,10 +32,10 @@ import { Storage } from "../+storage";
 import { Network } from "../+network";
 import { crdStore } from "../+custom-resources/crd.store";
 import { CustomResources } from "../+custom-resources/custom-resources";
-import { isActiveRoute } from "../../navigation";
+import { isActiveRoute, navigate } from "../../navigation";
 import { isAllowedResource } from "../../../common/utils/allowed-resource";
 import { Spinner } from "../spinner";
-import { ClusterPageMenuRegistration, ClusterPageMenuRegistry, ClusterPageRegistry, getExtensionPageUrl } from "../../../extensions/registries";
+import { ClusterPageMenuRegistration, ClusterPageMenuRegistry, ClusterPageRegistry, CommandRegistry, getExtensionPageUrl, isKubernetesClusterActive } from "../../../extensions/registries";
 import { SidebarItem } from "./sidebar-item";
 import { Apps } from "../+apps";
 import * as routes from "../../../common/routes";
@@ -57,6 +57,17 @@ export class Sidebar extends React.Component<Props> {
       kubeWatchApi.subscribeStores([
         crdStore,
       ]),
+      disposingReaction(() => crdStore.items.slice(), crds => (
+        CommandRegistry.getInstance().add(crds.map(crd => ({
+          id: `cluster.view.${crd.getResourceKind()}`,
+          title: `Cluster: View ${crd.getResourceKind()}`,
+          isActive: isKubernetesClusterActive,
+          action: () => navigate(crd.getResourceUrl()),
+        })))
+      ), {
+        fireImmediately: true,
+        delay: 100,
+      }),
     ]);
   }
 

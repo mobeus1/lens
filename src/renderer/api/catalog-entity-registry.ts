@@ -30,6 +30,7 @@ import { once } from "lodash";
 import logger from "../../common/logger";
 import { catalogEntityRunContext } from "./catalog-entity";
 import { CatalogRunEvent } from "../../common/catalog/catalog-run-event";
+import { isMainFrame } from "process";
 
 export type EntityFilter = (entity: CatalogEntity) => any;
 export type CatalogEntityOnBeforeRun = (event: CatalogRunEvent) => void | Promise<void>;
@@ -73,6 +74,16 @@ export class CatalogEntityRegistry {
     ipcRendererOn("catalog:items", (event, items: (CatalogEntityData & CatalogEntityKindData)[]) => {
       this.updateItems(items);
     });
+
+    if (isMainFrame) {
+      ipcRendererOn("catalog-entity:run", (event, id: string) => {
+        const entity = this.getById(id);
+
+        if (entity) {
+          this.onRun(entity);
+        }
+      });
+    }
   }
 
   @action updateItems(items: (CatalogEntityData & CatalogEntityKindData)[]) {

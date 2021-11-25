@@ -36,4 +36,10 @@ export interface WelcomeBannerRegistration {
   width?: number
 }
 
-export class WelcomeBannerRegistry extends BaseRegistry<WelcomeBannerRegistration> { }
+export class WelcomeBannerRegistry extends BaseRegistry<WelcomeBannerRegistration> {
+  constructor() {
+    super({
+      getRegisteredItem: item => [item, item],
+    });
+  }
+}

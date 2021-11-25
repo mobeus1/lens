@@ -35,13 +35,17 @@ export interface WorkloadsOverviewDetailRegistration {
 type RegisteredWorkloadsOverviewDetail = Required<WorkloadsOverviewDetailRegistration>;
 
 export class WorkloadsOverviewDetailRegistry extends BaseRegistry<WorkloadsOverviewDetailRegistration, RegisteredWorkloadsOverviewDetail> {
-  getItems() {
-    return orderBy(super.getItems(), "priority", "desc");
+  constructor() {
+    super({
+      getRegisteredItem: item => {
+        const { priority = 50, ...rest } = item;
+
+        return [item, { priority, ...rest }];
+      },
+    });
   }
 
-  protected getRegisteredItem(item: WorkloadsOverviewDetailRegistration): RegisteredWorkloadsOverviewDetail {
-    const { priority = 50, ...rest } = item;
-
-    return { priority, ...rest };
+  getItems() {
+    return orderBy(super.getItems(), "priority", "desc");
   }
 }

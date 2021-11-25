@@ -27,4 +27,10 @@ export interface WelcomeMenuRegistration {
   click: () => void | Promise<void>;
 }
 
-export class WelcomeMenuRegistry extends BaseRegistry<WelcomeMenuRegistration> {}
+export class WelcomeMenuRegistry extends BaseRegistry<WelcomeMenuRegistration> {
+  constructor() {
+    super({
+      getRegisteredItem: item => [item, item],
+    });
+  }
+}

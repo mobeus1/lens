@@ -24,12 +24,13 @@ import "./command-container.scss";
 import { observer } from "mobx-react";
 import React from "react";
 import { Dialog } from "../dialog";
-import { ipcRendererOn } from "../../../common/ipc";
 import { CommandDialog } from "./command-dialog";
 import type { ClusterId } from "../../../common/cluster-types";
-import { catalogEntityRegistry } from "../../api/catalog-entity-registry";
-import { CommandRegistration, CommandRegistry } from "../../../extensions/registries/command-registry";
 import { CommandOverlay } from "./command-overlay";
+import { isMac } from "../../../common/vars";
+import { catalogEntityRegistry } from "../../api/catalog-entity-registry";
+import { broadcastMessage, ipcRendererOn } from "../../../common/ipc";
+import { isActiveRoute } from "../../navigation";
 
 export interface CommandContainerProps {
   clusterId?: ClusterId;
@@ -44,30 +45,30 @@ export class CommandContainer extends React.Component<CommandContainerProps> {
     }
   }
 
-  private findCommandById(commandId: string) {
-    return CommandRegistry.getInstance().getItems().find((command) => command.id === commandId);
-  }
-
-  private runCommand(command: CommandRegistration) {
-    command.action({
-      entity: catalogEntityRegistry.activeEntity,
-    });
+  handleCommandPalette() {
+    if (isActiveRoute("cluster")) {
+      broadcastMessage(`command-palette:${catalogEntityRegistry.activeEntity.getId()}:open`);
+    } else {
+      CommandOverlay.open(<CommandDialog />);
+    }
   }
 
   componentDidMount() {
     if (this.props.clusterId) {
-      ipcRendererOn(`command-palette:run-action:${this.props.clusterId}`, (event, commandId: string) => {
-        const command = this.findCommandById(commandId);
-
-        if (command) {
-          this.runCommand(command);
-        }
-      });
-    } else {
-      ipcRendererOn("command-palette:open", () => {
+      ipcRendererOn(`command-palette:${this.props.clusterId}:open`, () => {
         CommandOverlay.open(<CommandDialog />);
       });
+    } else {
+      ipcRendererOn("command-palette:open", () => this.handleCommandPalette());
+      window.addEventListener("keydown", ({ key, shiftKey, ctrlKey, altKey, metaKey }) => {
+        const ctrlOrCmd = isMac ? metaKey && !ctrlKey : !metaKey && ctrlKey;
+
+        if (key === "p" && shiftKey && ctrlOrCmd && !altKey) {
+          this.handleCommandPalette();
+        }
+      });
     }
+
     window.addEventListener("keyup", (e) => this.escHandler(e), true);
   }
 

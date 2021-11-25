@@ -39,6 +39,12 @@ export interface CatalogEntityDetailRegistration<T extends CatalogEntity> {
 }
 
 export class CatalogEntityDetailRegistry extends BaseRegistry<CatalogEntityDetailRegistration<CatalogEntity>> {
+  constructor() {
+    super({
+      getRegisteredItem: item => [item, item],
+    });
+  }
+
   getItemsForKind(kind: string, apiVersion: string) {
     const items = this.getItems().filter((item) => {
       return item.kind === kind && item.apiVersions.includes(apiVersion);

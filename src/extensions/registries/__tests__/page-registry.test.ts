@@ -71,7 +71,7 @@ describe("page registry tests", () => {
     ThemeStore.createInstance();
     TerminalStore.createInstance();
     ClusterPageRegistry.createInstance();
-    GlobalPageRegistry.createInstance().add({
+    GlobalPageRegistry.createInstance().add([{
       id: "page-with-params",
       components: {
         Page: () => React.createElement("Page with params"),
@@ -80,7 +80,7 @@ describe("page registry tests", () => {
         test1: "test1-default",
         test2: "", // no default value, just declaration
       },
-    }, ext);
+    }], ext);
     GlobalPageRegistry.createInstance().add([
       {
         id: "test-page",

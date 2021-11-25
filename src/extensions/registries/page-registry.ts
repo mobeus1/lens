@@ -24,7 +24,7 @@
 import React from "react";
 import { observer } from "mobx-react";
 import { BaseRegistry } from "./base-registry";
-import { LensExtension, LensExtensionId, sanitizeExtensionName } from "../lens-extension";
+import { LensExtensionId, sanitizeExtensionName } from "../lens-extension";
 import { createPageParam, PageParam, PageParamInit, searchParamsOptions } from "../../renderer/navigation";
 
 export interface PageRegistration {
@@ -91,17 +91,19 @@ export function getExtensionPageUrl(target: PageTarget): string {
   return pageUrl.href.replace(pageUrl.origin, "");
 }
 
-class PageRegistry extends BaseRegistry<PageRegistration, RegisteredPage> {
-  protected getRegisteredItem(page: PageRegistration, ext: LensExtension): RegisteredPage {
-    const { id: pageId } = page;
-    const extensionId = ext.name;
-    const params = this.normalizeParams(extensionId, page.params);
-    const components = this.normalizeComponents(page.components, params);
-    const url = getExtensionPageUrl({ extensionId, pageId });
+class PageRegistry extends BaseRegistry<PageRegistration, RegisteredPage, string> {
+  constructor() {
+    super({
+      getRegisteredItem: (page, ext) => {
+        const { id } = page;
+        const extensionId = ext.name;
+        const params = this.normalizeParams(extensionId, page.params);
+        const components = this.normalizeComponents(page.components, params);
+        const url = getExtensionPageUrl({ extensionId, pageId: id });
 
-    return {
-      id: pageId, extensionId, params, components, url,
-    };
+        return [id, { id, extensionId, params, components, url }];
+      },
+    });
   }
 
   protected normalizeComponents(components: PageComponents, params?: PageParams<PageParam>): PageComponents {
@@ -136,7 +138,7 @@ class PageRegistry extends BaseRegistry<PageRegistration, RegisteredPage> {
 
         if (notAStringValue && !(parse || stringify)) {
           throw new Error(
-            `PageRegistry: param's "${paramName}" initialization has failed: 
+            `PageRegistry: param's "${paramName}" initialization has failed:
               paramInit.parse() and paramInit.stringify() are required for non string | string[] "defaultValue"`,
           );
         }

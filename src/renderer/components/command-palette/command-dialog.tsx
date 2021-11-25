@@ -26,15 +26,14 @@ import { observer } from "mobx-react";
 import React from "react";
 import { CommandRegistry } from "../../../extensions/registries/command-registry";
 import { CommandOverlay } from "./command-overlay";
-import { broadcastMessage } from "../../../common/ipc";
-import { navigate } from "../../navigation";
 import { catalogEntityRegistry } from "../../api/catalog-entity-registry";
 import type { CatalogEntity } from "../../../common/catalog";
-import { clusterViewURL } from "../../../common/routes";
+import { navigate } from "../../navigation";
+import { broadcastMessage } from "../../../common/ipc";
+import { IpcRendererNavigationEvents } from "../../navigation/events";
 
 @observer
 export class CommandDialog extends React.Component {
-  @observable menuIsOpen = true;
   @observable searchValue: any = undefined;
 
   constructor(props: {}) {
@@ -54,28 +53,25 @@ export class CommandDialog extends React.Component {
     };
 
     return registry.getItems().filter((command) => {
-      if (command.scope === "entity" && !this.activeEntity) {
-        return false;
-      }
-
       try {
-        return command.isActive?.(context) ?? true;
-      } catch(e) {
-        console.error(e);
+        return command.isActive(context);
+      } catch(error) {
+        console.error(`[COMMAND-DIALOG]: isActive for ${command.id} threw an error, defaulting to false`, error);
       }
 
       return false;
     })
-      .map((command) => ({
-        value: command.id,
-        label: command.title,
+      .map(({ id, title }) => ({
+        value: id,
+        label: typeof title === "function"
+          ? title(context)
+          : title,
       }))
       .sort((a, b) => a.label > b.label ? 1 : -1);
   }
 
-  private onChange(value: string) {
-    const registry = CommandRegistry.getInstance();
-    const command = registry.getItems().find((cmd) => cmd.id === value);
+  private async executeAction(commandId: string) {
+    const command = CommandRegistry.getInstance().getById(commandId);
 
     if (!command) {
       return;
@@ -83,19 +79,18 @@ export class CommandDialog extends React.Component {
 
     try {
       CommandOverlay.close();
+      command.action({
+        entity: this.activeEntity,
+        navigate: (url, opts = {}) => {
+          const { forceRootFrame = false } = opts;
 
-      if (command.scope === "global") {
-        command.action({
-          entity: this.activeEntity,
-        });
-      } else if(this.activeEntity) {
-        navigate(clusterViewURL({
-          params: {
-            clusterId: this.activeEntity.metadata.uid,
-          },
-        }));
-        broadcastMessage(`command-palette:run-action:${this.activeEntity.metadata.uid}`, command.id);
-      }
+          if (forceRootFrame) {
+            broadcastMessage(IpcRendererNavigationEvents.NAVIGATE_IN_APP, url);
+          } else {
+            navigate(url);
+          }
+        },
+      });
     } catch(error) {
       console.error("[COMMAND-DIALOG] failed to execute command", command.id, error);
     }
@@ -105,12 +100,12 @@ export class CommandDialog extends React.Component {
     return (
       <Select
         menuPortalTarget={null}
-        onChange={v => this.onChange(v.value)}
+        onChange={v => this.executeAction(v.value)}
         components={{
           DropdownIndicator: null,
           IndicatorSeparator: null,
         }}
-        menuIsOpen={this.menuIsOpen}
+        menuIsOpen
         options={this.options}
         autoFocus={true}
         escapeClearsValue={false}

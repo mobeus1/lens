@@ -21,41 +21,51 @@
 
 // Base class for extensions-api registries
 import { action, observable, makeObservable } from "mobx";
-import { Singleton } from "../../common/utils";
+import { Disposer, Singleton } from "../../common/utils";
 import { LensExtension } from "../lens-extension";
 
-export class BaseRegistry<T, I = T> extends Singleton {
-  private items = observable.map<T, I>([], { deep: false });
+export interface BaseRegistryOptions<T, I, ItemId> {
+  /**
+   * The function to get the registered version (and Id) of an item
+   */
+  getRegisteredItem: (item: T, extension?: LensExtension) => [ItemId, I];
+}
 
-  constructor() {
+export class BaseRegistry<T, I = T, ItemId = T> extends Singleton {
+  private items = observable.map<ItemId, I>([], { deep: false });
+  private getRegisteredItem: (item: T, extension?: LensExtension) => [ItemId, I];
+
+  constructor(opts: BaseRegistryOptions<T, I, ItemId>) {
     super();
     makeObservable(this);
+
+    this.getRegisteredItem = opts.getRegisteredItem;
   }
 
   getItems(): I[] {
     return Array.from(this.items.values());
   }
 
-  @action
-  add(items: T | T[], extension?: LensExtension) {
-    const itemArray = [items].flat() as T[];
-
-    itemArray.forEach(item => {
-      this.items.set(item, this.getRegisteredItem(item, extension));
-    });
-
-    return () => this.remove(...itemArray);
-  }
-
-  // eslint-disable-next-line unused-imports/no-unused-vars-ts
-  protected getRegisteredItem(item: T, extension?: LensExtension): I {
-    return item as any;
+  getById(id: ItemId): I | undefined {
+    return this.items.get(id);
   }
 
   @action
-  remove(...items: T[]) {
-    items.forEach(item => {
-      this.items.delete(item);
+  add(items: T[], extension?: LensExtension): Disposer {
+    const registeredItems = items.map(item => this.getRegisteredItem(item, extension));
+    const newIds: ItemId[] = [];
+
+    for (const [id, item] of registeredItems) {
+      if (!this.items.has(id)) {
+        this.items.set(id, item);
+        newIds.push(id);
+      }
+    }
+
+    return action(() => {
+      for (const id of newIds) {
+        this.items.delete(id);
+      }
     });
   }
 }

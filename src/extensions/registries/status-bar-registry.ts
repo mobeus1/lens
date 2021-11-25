@@ -40,4 +40,9 @@ export interface StatusBarRegistration extends StatusBarRegistrationV2 {
 }
 
 export class StatusBarRegistry extends BaseRegistry<StatusBarRegistration> {
+  constructor() {
+    super({
+      getRegisteredItem: item => [item, item],
+    });
+  }
 }
