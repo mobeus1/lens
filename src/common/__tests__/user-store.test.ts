@@ -53,13 +53,12 @@ describe("user store tests", () => {
   describe("for an empty config", () => {
     beforeEach(() => {
       mockFs({ tmp: { "config.json": "{}", "kube_config": "{}" }});
-
-      (UserStore.createInstance() as any).refreshNewContexts = jest.fn(() => Promise.resolve());
+      UserStore.createInstance();
     });
 
     afterEach(() => {
-      mockFs.restore();
       UserStore.resetInstance();
+      mockFs.restore();
     });
 
     it("allows setting and retrieving lastSeenAppVersion", () => {
@@ -143,7 +142,7 @@ describe("user store tests", () => {
       expect(us.lastSeenAppVersion).toBe("0.0.0");
     });
 
-    it.only("skips clusters for adding to kube-sync with files under extension_data/", () => {
+    it("skips clusters for adding to kube-sync with files under extension_data/", () => {
       const us = UserStore.getInstance();
 
       expect(us.syncKubeconfigEntries.has("tmp/extension_data/foo/bar")).toBe(false);

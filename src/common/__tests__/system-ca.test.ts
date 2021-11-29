@@ -39,7 +39,7 @@ const deps = { ...dependencies, ...devDependencies };
   });
 
   /**
-   * The test to ensure using getMacRootCA + injectCAs injects CAs in the same way as using 
+   * The test to ensure using getMacRootCA + injectCAs injects CAs in the same way as using
    * the auto injection (require('mac-ca'))
    */
   it("should inject the same ca as mac-ca", async () => {
@@ -78,7 +78,7 @@ const deps = { ...dependencies, ...devDependencies };
   });
 
   /**
-   * The test to ensure using win-ca/api injects CAs in the same way as using 
+   * The test to ensure using win-ca/api injects CAs in the same way as using
    * the auto injection (require('win-ca').inject('+'))
    */
   it("should inject the same ca as winca.inject('+')", async () => {
