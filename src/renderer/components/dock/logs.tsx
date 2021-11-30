@@ -20,7 +20,7 @@
  */
 
 import React from "react";
-import { observable, reaction, makeObservable, comparer } from "mobx";
+import { observable, makeObservable, comparer, computed, when } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 
 import { searchStore } from "../../../common/search-store";
@@ -31,8 +31,11 @@ import { LogList } from "./log-list";
 import { logStore } from "./log.store";
 import { LogSearch } from "./log-search";
 import { LogControls } from "./log-controls";
-import { logTabStore } from "./log-tab.store";
+import { LogTabData, logTabStore } from "./log-tab.store";
 import { podsStore } from "../+workloads-pods/pods.store";
+import { kubeWatchApi } from "../../../common/k8s-api/kube-watch-api";
+import { Spinner } from "../spinner";
+import { disposingReaction, noop } from "../../utils";
 
 interface Props {
   className?: string
@@ -42,6 +45,11 @@ interface Props {
 @observer
 export class Logs extends React.Component<Props> {
   @observable isLoading = true;
+  /**
+   * Only used for the inital loading of logs so that when logs are shorter
+   * than the viewport the user doesn't get incessant spinner every 700ms
+   */
+  @observable isLoadingInital = true;
 
   private logListElement = React.createRef<LogList>(); // A reference for VirtualList component
 
@@ -51,33 +59,101 @@ export class Logs extends React.Component<Props> {
   }
 
   componentDidMount() {
-    this.load();
-
-    disposeOnUnmount(this,
-      reaction(
-        () => [this.tabId, logTabStore.getData(this.tabId)] as const,
+    disposeOnUnmount(this, [
+      kubeWatchApi.subscribeStores([
+        podsStore,
+      ], {
+        namespaces: logTabStore.getNamespaces(),
+      }),
+      when(() => this.canLoad, () => this.load(true)),
+      disposingReaction(
+        () => [this.tabId, this.tabData] as const,
         ([curTabId], [oldTabId]) => {
           if (curTabId !== oldTabId) {
             logStore.clearLogs(this.tabId);
           }
 
-          this.load();
+          return when(() => this.canLoad, () => this.load(true));
         },
         {
           equals: comparer.structural,
         },
       ),
-    );
+      disposingReaction(() => this.tabData, (data) => {
+        if (data) {
+          return noop;
+        }
+
+        return when(() => this.canSwap, () => {
+          const { pods, pod } = this.getPods(data);
+
+          if (pods && !pod && pods.length > 0) {
+            logTabStore.mergeData(this.tabId, { selectedPod: pods[0].getId() });
+          }
+        });
+      }, {
+        equals: comparer.structural,
+        fireImmediately: false,
+      }),
+    ]);
   }
 
-  get tabId() {
+  private getPods({ podsOwner, selectedPod }: LogTabData) {
+    if (podsOwner) {
+      const pods = podsStore.getPodsByOwnerId(podsOwner);
+      const pod = pods.find(pod => pod.getId() === selectedPod);
+
+      return { pods, pod };
+    }
+
+    return { pod: podsStore.getById(selectedPod) };
+  }
+
+  @computed get tabData(): LogTabData {
+    return logTabStore.getData(this.tabId);
+  }
+
+  @computed get tabId() {
     return this.props.tab.id;
   }
 
-  load = async () => {
+  @computed get canSwap(): boolean {
+    const data = this.tabData;
+
+    if (!data) {
+      return false;
+    }
+
+    const { podsOwner } = data;
+
+    if (!podsOwner) {
+      return false;
+    }
+
+    return podsStore.getPodsByOwnerId(podsOwner).length > 0;
+  }
+
+  @computed get canLoad(): boolean {
+    const data = this.tabData;
+
+    if (!data) {
+      return false;
+    }
+
+    const { podsOwner, selectedPod } = data;
+    const pod = podsOwner
+      ? podsStore.getPodsByOwnerId(podsOwner).find(pod => pod.getId() === selectedPod)
+      : podsStore.getById(selectedPod);
+
+    return Boolean(pod);
+  }
+
+  load = async (initial = false) => {
     this.isLoading = true;
-    await logStore.load(this.tabId);
+    this.isLoadingInital = initial;
+    await logStore.load(this.tabId, this.tabData);
     this.isLoading = false;
+    this.isLoadingInital = false;
   };
 
   /**
@@ -91,30 +167,25 @@ export class Logs extends React.Component<Props> {
     this.logListElement.current.scrollToItem(activeOverlayLine, "center");
     // Scroll horizontally in timeout since virtual list need some time to prepare its contents
     setTimeout(() => {
-      const overlay = document.querySelector(".PodLogs .list span.active");
-
-      if (!overlay) return;
-      overlay.scrollIntoViewIfNeeded();
+      document.querySelector(".PodLogs .list span.active")?.scrollIntoViewIfNeeded();
     }, 100);
   };
 
   render() {
-    const { logs, logsWithoutTimestamps } = logStore;
-    const data = logTabStore.getData(this.tabId);
+    const data = this.tabData;
 
     if (!data) {
       return null;
     }
 
+    const logs = logStore.getLogs(this.tabId, data);
     const { podsOwner, selectedContainer, selectedPod, showTimestamps, previous } = data;
-    const searchLogs = showTimestamps ? logs : logsWithoutTimestamps;
-    const pods = podsStore.getPodsByOwnerId(podsOwner);
-    const pod = pods.find(pod => pod.getId() === selectedPod);
+    const { pods, pod } = this.getPods(data);
 
     if (!pod) {
       return (
         <div className="PodLogs flex column">
-          <p>Pod with ID {selectedPod} is no longer found under owner {podsOwner}</p>
+          <p>Pod with ID {selectedPod} is no longer found {podsOwner && `under owner ${podsOwner}`}</p>
         </div>
       );
     }
@@ -131,9 +202,14 @@ export class Logs extends React.Component<Props> {
                 pods={pods}
                 selectedContainer={selectedContainer}
               />
+              {
+                (this.isLoading && !this.isLoadingInital) && (
+                  <Spinner />
+                )
+              }
               <LogSearch
                 onSearch={this.onSearch}
-                logs={searchLogs}
+                logs={logs}
                 toPrevOverlay={this.onSearch}
                 toNextOverlay={this.onSearch}
               />
@@ -145,8 +221,8 @@ export class Logs extends React.Component<Props> {
         />
         <LogList
           logs={logs}
-          id={this.tabId}
-          isLoading={this.isLoading}
+          selectedContainer={selectedContainer}
+          isLoading={this.isLoadingInital}
           load={this.load}
           ref={this.logListElement}
         />
@@ -154,6 +230,7 @@ export class Logs extends React.Component<Props> {
           tabId={this.tabId}
           pod={pod}
           preferences={{ previous, showTimestamps }}
+          logs={logs}
         />
       </div>
     );

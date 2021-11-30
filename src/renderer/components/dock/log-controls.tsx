@@ -39,10 +39,10 @@ interface Props {
     showTimestamps: boolean;
     previous: boolean;
   };
+  logs: string[];
 }
 
-export const LogControls = observer((props: Props) => {
-  const { pod, tabId, preferences } = props;
+export const LogControls = observer(({ pod, tabId, preferences, logs }: Props) => {
   const since = logStore.getFirstTime(tabId);
 
   const toggleTimestamps = () => {
@@ -54,10 +54,7 @@ export const LogControls = observer((props: Props) => {
   };
 
   const downloadLogs = () => {
-    const fileName = pod.getName();
-    const logsToDownload = preferences.showTimestamps ? logStore.logs : logStore.logsWithoutTimestamps;
-
-    saveFileDialog(`${fileName}.log`, logsToDownload.join("\n"), "text/plain");
+    saveFileDialog(`${pod.getName()}.log`, logs.join("\n"), "text/plain");
   };
 
   return (

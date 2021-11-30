@@ -274,10 +274,10 @@ export abstract class KubeObjectStore<T extends KubeObject> extends ItemStore<T>
 
     // update existing items
     if (merge) {
-      const namespaces = partialItems.map(item => item.getNs());
+      const uids = new Set(partialItems.map(item => item.getId()));
 
       items = [
-        ...this.items.filter(existingItem => !namespaces.includes(existingItem.getNs())),
+        ...this.items.filter(existingItem => !uids.has(existingItem.getId())),
         ...partialItems,
       ];
     }

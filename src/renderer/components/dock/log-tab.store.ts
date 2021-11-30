@@ -21,7 +21,7 @@
 
 import Joi from "joi";
 import uniqueId from "lodash/uniqueId";
-import { action } from "mobx";
+import { action, runInAction } from "mobx";
 import type { IPodContainer, Pod } from "../../../common/k8s-api/endpoints";
 import logger from "../../../common/logger";
 import { DockTabStore, DockTabStoreOptions } from "./dock-tab.store";
@@ -29,14 +29,19 @@ import { dockStore, DockTab, DockTabCreate, TabId, TabKind } from "./dock.store"
 
 export interface LogTabData {
   /**
-   * The pod owner ID
+   * The pod owner ID.
    */
-  podsOwner: string;
+  podsOwner?: string;
 
   /**
    * The ID of the pod from the list of pods owned by `.podsOwner`
    */
   selectedPod: string;
+
+  /**
+   * The namespace of the pods. Used for watching those namespaces
+   */
+  namespace: string;
 
   /**
    * The name of the container within the selected pod.
@@ -59,8 +64,11 @@ export interface LogTabData {
 const logTabDataValidator = Joi.object({
   podsOwner: Joi
     .string()
-    .required(),
+    .optional(),
   selectedPod: Joi
+    .string()
+    .required(),
+  namespace: Joi
     .string()
     .required(),
   selectedContainer: Joi
@@ -109,17 +117,16 @@ export class LogTabStore extends DockTabStore<LogTabData> {
 
     if (!selectedContainer || typeof selectedContainer !== "object") {
       throw new TypeError("selectedContainer is not an object");
-
     }
 
     const podOwner = selectedPod.getOwnerRefs()[0];
+    const tabTitle = podOwner
+      ? `${podOwner.kind} Logs: ${podOwner.namespace}/${podOwner.name}`
+      : `Pod Logs: ${selectedPod.getNs()}/${selectedPod.getName()}`;
 
-    if (!podOwner) {
-      throw new Error(`Pod ${selectedPod.getId()} does not have any owner refs`);
-    }
-
-    return this.createLogsTab(`Pod ${selectedPod.getName()}`, {
-      podsOwner: podOwner.uid,
+    return this.createLogsTab(tabTitle, {
+      podsOwner: podOwner?.uid,
+      namespace: selectedPod.getNs(),
       selectedPod: selectedPod.getId(),
       selectedContainer: selectedContainer.name,
       showTimestamps: false,
@@ -137,7 +144,6 @@ export class LogTabStore extends DockTabStore<LogTabData> {
     }
 
     this.mergeData(tabId, { selectedPod: pod.getId(), selectedContainer: pod.getContainers()[0]?.name });
-    this.dockManager.renameTab(tabId, `Pod ${pod.getName()}`);
   }
 
   private createLogsTab(title: string, data: LogTabData): string {
@@ -167,7 +173,9 @@ export class LogTabStore extends DockTabStore<LogTabData> {
 
     if (error) {
       logger.warn(`[LOG-TAB-STORE]: data for ${tabId} was invalid`, error);
-      this.closeTab(tabId);
+      runInAction(() => {
+        this.closeTab(tabId);
+      });
 
       return undefined;
     }
@@ -175,9 +183,23 @@ export class LogTabStore extends DockTabStore<LogTabData> {
     return value;
   }
 
+  @action
   public closeTab(tabId: string) {
     this.clearData(tabId);
     this.dockManager.closeTab(tabId);
+  }
+
+  /**
+   * Get a set of namespaces which pod tabs care about
+   */
+  public getNamespaces(): string[] {
+    const namespaces = new Set<string>();
+
+    for (const { namespace } of this.data.values()) {
+      namespaces.add(namespace);
+    }
+
+    return [...namespaces];
   }
 }
 

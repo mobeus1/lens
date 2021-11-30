@@ -19,41 +19,42 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { autorun, computed, observable, makeObservable } from "mobx";
+import { observable, makeObservable } from "mobx";
+import moment from "moment";
 import { podsStore } from "../+workloads-pods/pods.store";
 
 import { IPodLogsQuery, podsApi } from "../../../common/k8s-api/endpoints";
-import { autoBind, interval } from "../../utils";
-import { dockStore, TabId, TabKind } from "./dock.store";
-import { logTabStore } from "./log-tab.store";
+import { UserStore } from "../../../common/user-store";
+import { autoBind } from "../../utils";
+import type { TabId } from "./dock.store";
+import type { LogTabData } from "./log-tab.store";
 
 type PodLogLine = string;
 
 const logLinesToLoad = 500;
 
+function removeTimestamp(logLine: string) {
+  return logLine.replace(/^\d+.*?\s/gm, "");
+}
+
+function formatTimestamp(log: string, tz: string): string {
+  const extraction = /^(?<timestamp>\d+\S+)(?<line>.*)/.exec(log);
+
+  if (!extraction) {
+    return log;
+  }
+
+  const { timestamp, line } = extraction.groups;
+
+  return `${moment.tz(timestamp, tz).format()}${line}`;
+}
+
 export class LogStore {
-  private refresher = interval(10, () => {
-    const id = dockStore.selectedTabId;
-
-    if (!this.podLogs.get(id)) return;
-    this.loadMore(id);
-  });
-
   @observable podLogs = observable.map<TabId, PodLogLine[]>();
 
   constructor() {
     makeObservable(this);
     autoBind(this);
-
-    autorun(() => {
-      const { selectedTab, isOpen } = dockStore;
-
-      if (selectedTab?.kind === TabKind.POD_LOGS && isOpen) {
-        this.refresher.start();
-      } else {
-        this.refresher.stop();
-      }
-    }, { delay: 500 });
   }
 
   handlerError(tabId: TabId, error: any): void {
@@ -66,7 +67,6 @@ export class LogStore {
       `Reason: ${error.reason} (${error.code})`,
     ];
 
-    this.refresher.stop();
     this.podLogs.set(tabId, message);
   }
 
@@ -77,13 +77,14 @@ export class LogStore {
    * messages
    * @param tabId
    */
-  load = async (tabId: TabId) => {
+  load = async (tabId: TabId, data: LogTabData) => {
     try {
-      const logs = await this.loadLogs(tabId, {
-        tailLines: this.lines + logLinesToLoad,
-      });
+      const prevLogsLength = this.podLogs.get(tabId)?.length ?? 0;
+      const params = {
+        tailLines: prevLogsLength + logLinesToLoad,
+      };
+      const logs = await this.loadLogs(data, params);
 
-      this.refresher.start();
       this.podLogs.set(tabId, logs);
     } catch (error) {
       this.handlerError(tabId, error);
@@ -96,19 +97,18 @@ export class LogStore {
    * starting from last line received.
    * @param tabId
    */
-  loadMore = async (tabId: TabId) => {
+  loadMore = async (tabId: TabId, data: LogTabData) => {
     if (!this.podLogs.get(tabId).length) {
       return;
     }
 
     try {
-      const oldLogs = this.podLogs.get(tabId);
-      const logs = await this.loadLogs(tabId, {
+      const logs = await this.loadLogs(data, {
         sinceTime: this.getLastSinceTime(tabId),
       });
 
       // Add newly received logs to bottom
-      this.podLogs.set(tabId, [...oldLogs, ...logs.filter(Boolean)]);
+      this.podLogs.get(tabId).push(...logs.filter(Boolean));
     } catch (error) {
       this.handlerError(tabId, error);
     }
@@ -121,16 +121,11 @@ export class LogStore {
    * @param params request parameters described in IPodLogsQuery interface
    * @returns A fetch request promise
    */
-  async loadLogs(tabId: TabId, params: Partial<IPodLogsQuery>): Promise<string[]> {
-    const data = logTabStore.getData(tabId);
-
-    if (!data) {
-      return [];
-    }
-
+  async loadLogs(data: LogTabData, params: Partial<IPodLogsQuery>): Promise<string[]> {
     const { podsOwner, selectedContainer, selectedPod, previous } = data;
-    const pods = podsStore.getPodsByOwnerId(podsOwner);
-    const pod = pods.find(pod => pod.getId() === selectedPod);
+    const pod = podsOwner
+      ? podsStore.getPodsByOwnerId(podsOwner).find(pod => pod.getId() === selectedPod)
+      : podsStore.getById(selectedPod);
 
     if (!pod) {
       return [];
@@ -145,34 +140,16 @@ export class LogStore {
       previous,
     });
 
-    return result.trimEnd().split("\n");
+    return result.split("\n").filter(Boolean);
   }
 
-  /**
-   * Converts logs into a string array
-   * @returns Length of log lines
-   */
-  @computed
-  get lines(): number {
-    return this.logs.length;
-  }
+  getLogs(tabId: TabId, { showTimestamps }: LogTabData): string[] {
+    const logs = this.podLogs.get(tabId) ?? [];
+    const { localeTimezone } = UserStore.getInstance();
 
-
-  /**
-   * Returns logs with timestamps for selected tab
-   */
-  @computed
-  get logs() {
-    return this.podLogs.get(dockStore.selectedTabId) ?? [];
-  }
-
-  /**
-   * Removes timestamps from each log line and returns changed logs
-   * @returns Logs without timestamps
-   */
-  @computed
-  get logsWithoutTimestamps() {
-    return this.logs.map(item => this.removeTimestamps(item));
+    return showTimestamps
+      ? logs.map(log => formatTimestamp(log, localeTimezone))
+      : logs.map(removeTimestamp);
   }
 
   /**
@@ -213,22 +190,8 @@ export class LogStore {
     return stamp.toLocaleString();
   }
 
-  splitOutTimestamp(logs: string): [string, string] {
-    const extraction = /^(\d+\S+)(.*)/m.exec(logs);
-
-    if (!extraction || extraction.length < 3) {
-      return ["", logs];
-    }
-
-    return [extraction[1], extraction[2]];
-  }
-
   getTimestamps(logs: string) {
     return logs.match(/^\d+\S+/gm);
-  }
-
-  removeTimestamps(logs: string) {
-    return logs.replace(/^\d+.*?\s/gm, "");
   }
 
   clearLogs(tabId: TabId) {

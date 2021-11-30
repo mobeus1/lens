@@ -150,6 +150,10 @@ export class ClusterStatus extends React.Component<Props> {
   }
 
   render() {
+    if (!this.entity) {
+      return null;
+    }
+
     return (
       <div className={cssNames(styles.status, "flex column box center align-center justify-center", this.props.className)}>
         <div className="flex items-center column gaps">
