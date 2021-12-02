@@ -20,7 +20,7 @@
  */
 
 import React from "react";
-import { observable, makeObservable, comparer, computed, when } from "mobx";
+import { observable, makeObservable, computed, when } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 
 import { searchStore } from "../../../common/search-store";
@@ -35,7 +35,7 @@ import { LogTabData, logTabStore } from "./log-tab.store";
 import { podsStore } from "../+workloads-pods/pods.store";
 import { kubeWatchApi } from "../../../common/k8s-api/kube-watch-api";
 import { Spinner } from "../spinner";
-import { disposingReaction, noop } from "../../utils";
+import { disposingReaction, noop, comparer } from "../../utils";
 
 interface Props {
   className?: string

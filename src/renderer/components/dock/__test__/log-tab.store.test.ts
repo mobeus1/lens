@@ -84,17 +84,11 @@ describe("LogTabStore", () => {
       tabId = logTabStore.createPodTab({ selectedContainer: { name: "docker-exporter" } as any, selectedPod: pod });
     });
 
-    it("should not call dockManager.renameTab if the new pod is the same as the old pod", () => {
-      logTabStore.changeSelectedPod(tabId, pod);
-      expect(dockManager.renameTab).not.toBeCalled();
-    });
-
-    it("should rename tab and change data if a new pod", () => {
+    it("should work as expected", () => {
       const newPod = new Pod(deploymentPod1);
 
       logTabStore.changeSelectedPod(tabId, newPod);
 
-      expect(dockManager.renameTab).toBeCalledWith(tabId, "Pod deploymentPod1");
       expect(logTabStore.getData(tabId)).toMatchObject({
         selectedPod: newPod.getId(),
         selectedContainer: newPod.getContainers()[0].name,

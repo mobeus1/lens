@@ -18,25 +18,32 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import type { IReactionPublic, IReactionOptions, IReactionDisposer } from "mobx";
-import { reaction } from "mobx";
-import type { Disposer } from "./disposer";
 
 /**
- * Similar to mobx's builtin `reaction` function but supports returning a
- * disposer from `effect` that will be cancelled everytime a new reaction is
- * fired and when the reaction is disposed.
+ * The functions of this module should be used so that
  */
-export function disposingReaction<T, FireImmediately extends boolean = false>(expression: (r: IReactionPublic) => T, effect: (arg: T, prev: FireImmediately extends true ? T | undefined : T, r: IReactionPublic) => Disposer, opts?: IReactionOptions<T, FireImmediately>): IReactionDisposer {
-  let prevDisposer: Disposer;
 
-  const reactionDisposer = reaction<T, FireImmediately>(expression, (arg: T, prev: T, r: IReactionPublic) => {
-    prevDisposer?.();
-    prevDisposer = effect(arg, prev, r);
-  }, opts);
+import { comparer as _comparer } from "mobx";
 
-  return Object.assign(() => {
-    reactionDisposer();
-    prevDisposer?.();
-  }, reactionDisposer);
+function identity<T>(a: T, b: T): boolean {
+  return _comparer.identity(a, b);
 }
+
+function defaultComparer<T>(a: T, b: T): boolean {
+  return _comparer.default(a, b);
+}
+
+function structural<T>(a: T, b: T): boolean {
+  return _comparer.structural(a, b);
+}
+
+function shallow<T>(a: T, b: T): boolean {
+  return _comparer.shallow(a, b);
+}
+
+export const comparer = {
+  identity,
+  default: defaultComparer,
+  structural,
+  shallow,
+};

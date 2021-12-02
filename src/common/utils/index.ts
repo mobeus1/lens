@@ -31,6 +31,7 @@ export * from "./autobind";
 export * from "./camelCase";
 export * from "./cloneJson";
 export * from "./cluster-id-url-parsing";
+export * from "./comparer";
 export * from "./convertCpu";
 export * from "./convertMemory";
 export * from "./debouncePromise";
