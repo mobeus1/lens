@@ -55,12 +55,12 @@ describe("LogTabStore", () => {
       expect(() => logTabStore.createPodTab({ selectedContainer: 1 as any, selectedPod: {} as any })).toThrow(/is not an object/);
     });
 
-    it("throws if selectedPod has no owner refs", () => {
+    it("does not throw if selectedPod has no owner refs", () => {
       const dockManager = getMockDockManager();
       const logTabStore = new LogTabStore({ autoInit: false }, dockManager);
       const pod = new Pod(noOwnersPod);
 
-      expect(() => logTabStore.createPodTab({ selectedContainer: {} as any, selectedPod: pod })).toThrow(/does not have any owner refs/);
+      expect(() => logTabStore.createPodTab({ selectedContainer: {} as any, selectedPod: pod })).not.toThrow();
     });
 
     it("should return a TabId if created sucessfully", () => {
