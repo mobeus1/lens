@@ -27,6 +27,7 @@ import lensDarkThemeJson from "./themes/lens-dark.json";
 import lensLightThemeJson from "./themes/lens-light.json";
 import type { SelectOption } from "./components/select";
 import type { MonacoEditorProps } from "./components/monaco-editor";
+import { defaultTheme } from "../common/vars";
 
 export type ThemeId = string;
 
@@ -53,7 +54,7 @@ export class ThemeStore extends Singleton {
   }
 
   @computed get activeTheme(): Theme {
-    return this.themes.get(this.activeThemeId) ?? this.themes.get(ThemeStore.defaultTheme);
+    return this.themes.get(this.activeThemeId) ?? this.themes.get(defaultTheme);
   }
 
   @computed get themeOptions(): SelectOption<string>[] {

@@ -28,9 +28,9 @@ module.exports = {
       ],
       rules: {
         "import/no-unresolved": ["error", {
-          ignore: ["@k8slens/extensions"]
+          ignore: ["@k8slens/extensions"],
         }],
-      }
-    }
-  ]
+      },
+    },
+  ],
 };

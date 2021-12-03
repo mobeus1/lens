@@ -26,7 +26,7 @@ import { SubTitle } from "../layout/sub-title";
 /**
  *
  */
-export function ExtensionSettings({ title, id, components: { Hint, Input } }: RegisteredAppPreference) {
+export function ExtensionSettings({ title, id, components: { Hint, Input }}: RegisteredAppPreference) {
   return (
     <>
       <section id={id} className="small">

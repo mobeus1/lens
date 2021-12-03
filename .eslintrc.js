@@ -137,10 +137,6 @@ module.exports = {
           "asyncArrow": "always",
         }],
         "unused-imports/no-unused-imports-ts": process.env.PROD === "true" ? "error" : "warn",
-        "import/no-cycle": [2, {
-          ignoreExternal: true,
-          maxDepth: 5,
-        }],
         "unused-imports/no-unused-vars-ts": [
           "warn", {
             "vars": "all",
@@ -230,10 +226,6 @@ module.exports = {
           "asyncArrow": "always",
         }],
         "unused-imports/no-unused-imports-ts": process.env.PROD === "true" ? "error" : "warn",
-        "import/no-cycle": [2, {
-          ignoreExternal: true,
-          maxDepth: 5,
-        }],
         "unused-imports/no-unused-vars-ts": [
           "warn", {
             "vars": "all",
@@ -257,7 +249,6 @@ module.exports = {
           "objectsInObjects": false,
           "arraysInObjects": true,
         }],
-        "react/prop-types": "off",
         "semi": "off",
         "@typescript-eslint/semi": ["error"],
         "linebreak-style": ["error", "unix"],
